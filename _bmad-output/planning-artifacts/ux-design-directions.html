@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yakimoji UX Design Directions</title>
+    <style>
+      :root {
+        --bg: #f6f2ec;
+        --surface: #fcfaf7;
+        --surface-strong: #ffffff;
+        --surface-soft: #f0ebe4;
+        --border: #ddd4ca;
+        --border-strong: #bbae9f;
+        --text: #151311;
+        --text-muted: #6b6258;
+        --text-soft: #8e8478;
+        --ink: #0d0c0b;
+        --accent: #20242c;
+        --accent-soft: #404654;
+        --success: #2f5f48;
+        --warning: #8a6339;
+        --danger: #7f3e3e;
+        --shadow: 0 1px 1px rgba(13, 12, 11, 0.14), 0 10px 30px rgba(13, 12, 11, 0.06);
+        --radius-sm: 10px;
+        --radius-md: 18px;
+        --radius-lg: 28px;
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 40px;
+        --space-8: 56px;
+        --space-9: 80px;
+        --max: 1440px;
+        --display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Cormorant Garamond", serif;
+        --body: Inter, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+        --mono: "SFMono-Regular", "JetBrains Mono", Consolas, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--body);
+        background:
+          radial-gradient(circle at top left, rgba(255, 255, 255, 0.66), transparent 28%),
+          linear-gradient(180deg, #f7f4ef 0%, #f2ede6 100%);
+        color: var(--text);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: var(--space-7) var(--space-5) var(--space-9);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: var(--space-7);
+        align-items: end;
+        margin-bottom: var(--space-8);
+      }
+
+      .eyebrow,
+      .chip,
+      .mini-label,
+      .tag {
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow {
+        color: var(--text-muted);
+        margin-bottom: var(--space-3);
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin: 0;
+        font-weight: 400;
+      }
+
+      .hero h1 {
+        font-family: var(--display);
+        font-size: clamp(44px, 7vw, 72px);
+        line-height: 0.98;
+        letter-spacing: -0.03em;
+        max-width: 11ch;
+      }
+
+      .hero p {
+        margin: var(--space-4) 0 0;
+        max-width: 36rem;
+        color: var(--text-muted);
+        font-size: 16px;
+        line-height: 1.65;
+      }
+
+      .hero-card {
+        background: rgba(255, 255, 255, 0.58);
+        border: 1px solid rgba(186, 174, 159, 0.72);
+        border-radius: var(--radius-lg);
+        padding: var(--space-6);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .hero-card h2 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: var(--space-4);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-4);
+      }
+
+      .hero-grid div {
+        border-top: 1px solid var(--border);
+        padding-top: var(--space-3);
+      }
+
+      .hero-grid strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 6px;
+      }
+
+      .hero-grid span {
+        color: var(--text-soft);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-4) 0;
+        margin-bottom: var(--space-7);
+        backdrop-filter: blur(14px);
+      }
+
+      .toolbar-panel {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        align-items: center;
+        background: rgba(252, 250, 247, 0.8);
+        border: 1px solid rgba(186, 174, 159, 0.6);
+        border-radius: 999px;
+        padding: 10px 14px;
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+      }
+
+      .toolbar button {
+        border: 1px solid var(--border);
+        background: white;
+        color: var(--text);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font: inherit;
+        cursor: pointer;
+        transition: 160ms ease;
+      }
+
+      .toolbar button:hover,
+      .toolbar button[aria-pressed="true"] {
+        background: var(--ink);
+        color: #fbf7f2;
+        border-color: var(--ink);
+      }
+
+      .note {
+        color: var(--text-soft);
+        font-size: 13px;
+      }
+
+      .directions {
+        display: grid;
+        gap: var(--space-8);
+      }
+
+      .direction {
+        display: grid;
+        grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+        gap: var(--space-6);
+        align-items: start;
+        padding-top: var(--space-6);
+        border-top: 1px solid rgba(186, 174, 159, 0.58);
+      }
+
+      .direction-copy {
+        position: sticky;
+        top: 88px;
+      }
+
+      .direction-copy h2 {
+        font-family: var(--display);
+        font-size: 34px;
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+        margin-top: var(--space-3);
+        margin-bottom: var(--space-4);
+      }
+
+      .direction-copy p {
+        margin: 0 0 var(--space-4);
+        color: var(--text-muted);
+        line-height: 1.65;
+      }
+
+      .bullets {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--text-muted);
+        line-height: 1.7;
+      }
+
+      .preview-shell {
+        position: relative;
+        background: rgba(252, 250, 247, 0.82);
+        border: 1px solid rgba(186, 174, 159, 0.58);
+        border-radius: 34px;
+        padding: var(--space-5);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        transition: 180ms ease;
+      }
+
+      .preview-shell.compact {
+        max-width: 430px;
+      }
+
+      .preview-surface {
+        min-height: 820px;
+        border-radius: 24px;
+        background: var(--surface);
+        border: 1px solid rgba(221, 212, 202, 0.7);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.72) inset;
+        overflow: hidden;
+      }
+
+      .preview-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid rgba(221, 212, 202, 0.72);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .brand-mark {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: conic-gradient(from 180deg, #5b7ee5, #4cb5c8, #efe6d8, #2a2f39, #5b7ee5);
+      }
+
+      .top-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .pill,
+      .subpill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(221, 212, 202, 0.85);
+        padding: 9px 14px;
+        font-size: 13px;
+        background: white;
+      }
+
+      .pill.filled {
+        background: var(--ink);
+        color: #fcfaf7;
+        border-color: var(--ink);
+      }
+
+      .layout {
+        display: grid;
+        min-height: 760px;
+      }
+
+      .layout.two-col {
+        grid-template-columns: 280px minmax(0, 1fr);
+      }
+
+      .layout.one-col {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .sidebar {
+        padding: var(--space-5);
+        border-right: 1px solid rgba(221, 212, 202, 0.72);
+        background: rgba(250, 247, 242, 0.9);
+      }
+
+      .sidebar nav,
+      .rail,
+      .stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        font-size: 14px;
+        color: var(--text-muted);
+      }
+
+      .nav-item.active {
+        background: white;
+        color: var(--text);
+        border: 1px solid rgba(221, 212, 202, 0.85);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+      }
+
+      .main {
+        padding: var(--space-5);
+        display: grid;
+        gap: var(--space-5);
+        align-content: start;
+      }
+
+      .section-card,
+      .task-card,
+      .detail-card,
+      .status-card,
+      .timeline-card {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(221, 212, 202, 0.82);
+        border-radius: 22px;
+        padding: var(--space-5);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+      }
+
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: var(--space-4);
+        margin-bottom: var(--space-5);
+      }
+
+      .section-head h3 {
+        font-family: var(--display);
+        font-size: 30px;
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+      }
+
+      .section-head p,
+      .meta,
+      .supporting {
+        margin: 0;
+        color: var(--text-muted);
+        line-height: 1.55;
+        font-size: 14px;
+      }
+
+      .hero-upload {
+        border: 1.5px dashed rgba(186, 174, 159, 0.9);
+        border-radius: 24px;
+        padding: 40px 28px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(246, 242, 236, 0.9)),
+          radial-gradient(circle at top right, rgba(91, 126, 229, 0.08), transparent 28%);
+      }
+
+      .hero-upload h4 {
+        font-family: var(--display);
+        font-size: 42px;
+        line-height: 0.98;
+        letter-spacing: -0.03em;
+        max-width: 10ch;
+        margin-bottom: var(--space-3);
+      }
+
+      .hero-upload .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        margin-top: var(--space-5);
+      }
+
+      .grid-2,
+      .grid-3 {
+        display: grid;
+        gap: var(--space-4);
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .mini-card {
+        padding: var(--space-4);
+        border-radius: 18px;
+        border: 1px solid rgba(221, 212, 202, 0.82);
+        background: rgba(252, 250, 247, 0.86);
+      }
+
+      .mini-card strong,
+      .task-title,
+      .status-title {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+
+      .mini-card span,
+      .task-meta,
+      .status-meta {
+        color: var(--text-soft);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .pipeline {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .step {
+        padding: 14px 12px;
+        border-radius: 18px;
+        background: rgba(246, 242, 236, 0.9);
+        border: 1px solid rgba(221, 212, 202, 0.85);
+      }
+
+      .step.active {
+        background: rgba(32, 36, 44, 0.95);
+        color: #f8f5f0;
+        border-color: rgba(32, 36, 44, 1);
+      }
+
+      .step.done {
+        background: rgba(47, 95, 72, 0.12);
+        border-color: rgba(47, 95, 72, 0.28);
+      }
+
+      .timeline {
+        display: grid;
+        gap: var(--space-4);
+      }
+
+      .timeline-row {
+        display: grid;
+        grid-template-columns: 90px 14px 1fr;
+        gap: var(--space-4);
+        align-items: start;
+      }
+
+      .timeline-time {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-soft);
+        padding-top: 2px;
+      }
+
+      .timeline-node {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--ink);
+        margin-top: 4px;
+        position: relative;
+      }
+
+      .timeline-node::after {
+        content: "";
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        width: 1px;
+        height: 42px;
+        background: rgba(186, 174, 159, 0.68);
+        transform: translateX(-50%);
+      }
+
+      .timeline-row:last-child .timeline-node::after {
+        display: none;
+      }
+
+      .timeline-body h4 {
+        font-size: 14px;
+        margin-bottom: 6px;
+      }
+
+      .timeline-body p {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .annotation {
+        margin-top: var(--space-4);
+        padding: 12px 14px;
+        border-left: 2px solid rgba(32, 36, 44, 0.9);
+        background: rgba(246, 242, 236, 0.72);
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .annotations-hidden .annotation {
+        display: none;
+      }
+
+      .direction-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1px solid rgba(221, 212, 202, 0.92);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.84);
+      }
+
+      .evaluation {
+        display: grid;
+        gap: var(--space-4);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: var(--space-5);
+      }
+
+      .evaluation .mini-card {
+        min-height: 110px;
+      }
+
+      .quote-panel {
+        padding: var(--space-5);
+        border-radius: 24px;
+        background: var(--ink);
+        color: #faf6f0;
+      }
+
+      .quote-panel h4 {
+        font-family: var(--display);
+        font-size: 32px;
+        line-height: 1.08;
+        letter-spacing: -0.03em;
+        margin-bottom: var(--space-3);
+      }
+
+      .quote-panel p {
+        margin: 0;
+        color: rgba(250, 246, 240, 0.76);
+        line-height: 1.65;
+      }
+
+      .bar-chart {
+        display: grid;
+        gap: 12px;
+      }
+
+      .bar {
+        display: grid;
+        grid-template-columns: 120px 1fr auto;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .bar-track {
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(221, 212, 202, 0.8);
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: var(--ink);
+      }
+
+      .failure-box {
+        border-radius: 20px;
+        padding: var(--space-5);
+        background: rgba(127, 62, 62, 0.08);
+        border: 1px solid rgba(127, 62, 62, 0.24);
+      }
+
+      .failure-box h4 {
+        font-size: 15px;
+        margin-bottom: 8px;
+      }
+
+      .footer {
+        margin-top: var(--space-9);
+        padding-top: var(--space-6);
+        border-top: 1px solid rgba(186, 174, 159, 0.58);
+        color: var(--text-soft);
+        font-size: 13px;
+      }
+
+      @media (max-width: 1080px) {
+        .hero,
+        .direction {
+          grid-template-columns: 1fr;
+        }
+
+        .direction-copy {
+          position: static;
+        }
+
+        .layout.two-col {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          border-right: 0;
+          border-bottom: 1px solid rgba(221, 212, 202, 0.72);
+        }
+      }
+
+      @media (max-width: 780px) {
+        .page {
+          padding: var(--space-5) var(--space-4) var(--space-8);
+        }
+
+        .preview-shell,
+        .preview-surface {
+          border-radius: 22px;
+        }
+
+        .grid-2,
+        .grid-3,
+        .evaluation,
+        .pipeline {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-upload h4 {
+          font-size: 34px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Yakimoji / Design Directions</div>
+          <h1>把“导入视频并自动开跑”做成真正可信的工作台。</h1>
+          <p>
+            下面的六个方向都基于同一组前提：中性色、强排版、宽松呼吸感、专业但克制的内容生产控制台气质。区别主要在于布局权重、流程可见性、导入入口强调方式，以及“工作台”与“自动化流程”谁更站在前景。
+          </p>
+        </div>
+        <div class="hero-card">
+          <h2>本轮比较重点</h2>
+          <div class="hero-grid">
+            <div>
+              <strong>任务导入感</strong>
+              <span>入口更像“投递任务”还是“进入控制台”。</span>
+            </div>
+            <div>
+              <strong>流程可信度</strong>
+              <span>状态表达是否足够清楚，失败解释是否足够可托付。</span>
+            </div>
+            <div>
+              <strong>视觉克制度</strong>
+              <span>编辑感、呼吸感与工具效率之间的平衡点。</span>
+            </div>
+            <div>
+              <strong>产品主语义</strong>
+              <span>到底更像工作台、处理器，还是流程控制面板。</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="toolbar">
+        <div class="toolbar-panel">
+          <span class="note">预览宽度</span>
+          <button type="button" data-mode="desktop" aria-pressed="true">Desktop</button>
+          <button type="button" data-mode="mobile" aria-pressed="false">Mobile</button>
+        </div>
+        <div class="toolbar-panel">
+          <span class="note">注释说明</span>
+          <button type="button" id="toggle-annotations" aria-pressed="true">Show Notes</button>
+        </div>
+      </section>
+
+      <section class="directions" id="directions">
+        <article class="direction">
+          <div class="direction-copy">
+            <div class="direction-badge">
+              <span class="chip">Direction 01</span>
+              <strong>Editorial Console</strong>
+            </div>
+            <h2>编辑型工作台</h2>
+            <p>最贴近你当前视觉偏好的方向。把导入入口做成像首页主叙事，把工作台收进有秩序的分区中，整体像一张经过编辑整理的控制台版面。</p>
+            <ul class="bullets">
+              <li>最强的排版气质与呼吸感</li>
+              <li>导入入口最具主视觉地位</li>
+              <li>适合强调“专业但克制”的第一印象</li>
+            </ul>
+          </div>
+          <div class="preview-shell" data-responsive>
+            <div class="preview-surface annotations-hidden-false">
+              <div class="preview-topbar">
+                <div class="brand"><span class="brand-mark"></span> Yakimoji</div>
+                <div class="top-actions">
+                  <div class="pill">Presets</div>
+                  <div class="pill filled">New Task</div>
+                </div>
+              </div>
+              <div class="layout two-col">
+                <aside class="sidebar">
+                  <nav>
+                    <div class="nav-item active">Tasks</div>
+                    <div class="nav-item">Channel Presets</div>
+                    <div class="nav-item">Exceptions</div>
+                    <div class="nav-item">Deliveries</div>
+                  </nav>
+                </aside>
+                <main class="main">
+                  <section class="hero-upload">
+                    <div class="eyebrow">Start a Run</div>
+                    <h4>拖入视频，或者粘贴频道链接。</h4>
+                    <p class="supporting">系统会识别来源、带出默认预设，并尽快进入自动处理。目标不是配置一项任务，而是把流程交出去。</p>
+                    <div class="actions">
+                      <div class="pill filled">Paste YouTube URL</div>
+                      <div class="pill">Drop Video File</div>
+                    </div>
+                  </section>
+                  <section class="section-card">
+                    <div class="section-head">
+                      <div>
+                        <div class="eyebrow">Matched Context</div>
+                        <h3>已命中频道预设，并开始自动处理。</h3>
+                      </div>
+                      <div class="mini-card">
+                        <strong>Preset: Kurzgesagt CN</strong>
+                        <span>中译中字幕 / 标准 Shorts 模板 / 输出 mp4 + srt</span>
+                      </div>
+                    </div>
+                    <div class="pipeline">
+                      <div class="step done"><strong>下载</strong><span>source locked</span></div>
+                      <div class="step active"><strong>转录</strong><span>running</span></div>
+                      <div class="step"><strong>翻译</strong><span>queued</span></div>
+                      <div class="step"><strong>烤录</strong><span>queued</span></div>
+                      <div class="step"><strong>交付</strong><span>pending</span></div>
+                    </div>
+                    <div class="annotation">这个方向把“已开始自动处理”放在最高优先级，让导入后的价值瞬间立刻可见。</div>
+                  </section>
+                </main>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction">
+          <div class="direction-copy">
+            <div class="direction-badge">
+              <span class="chip">Direction 02</span>
+              <strong>Process Ledger</strong>
+            </div>
+            <h2>流程账本</h2>
+            <p>更强调“流程可托付”。首页不像 hero，而像一份实时的运行账本。适合把透明度、失败解释和状态可见性放到比品牌姿态更前的位置。</p>
+            <ul class="bullets">
+              <li>流程和阶段表达最强</li>
+              <li>失败解释和恢复最自然</li>
+              <li>比 Direction 01 更理性、更像控制面板</li>
+            </ul>
+          </div>
+          <div class="preview-shell" data-responsive>
+            <div class="preview-surface">
+              <div class="preview-topbar">
+                <div class="brand"><span class="brand-mark"></span> Yakimoji</div>
+                <div class="top-actions">
+                  <div class="pill">Running 6</div>
+                  <div class="pill filled">Submit Source</div>
+                </div>
+              </div>
+              <div class="layout one-col">
+                <main class="main">
+                  <section class="section-card">
+                    <div class="section-head">
+                      <div>
+                        <div class="eyebrow">Automation Ledger</div>
+                        <h3>每一条流程都清楚到可以追责。</h3>
+                      </div>
+                      <p class="meta">导入后最先得到的不是漂亮结果，而是可信的执行证据。</p>
+                    </div>
+                    <div class="timeline">
+                      <div class="timeline-row">
+                        <div class="timeline-time">09:14</div>
+                        <div class="timeline-node"></div>
+                        <div class="timeline-body">
+                          <h4>Source received</h4>
+                          <p>检测到 YouTube 来源，频道签名与现有预设匹配成功。</p>
+                        </div>
+                      </div>
+                      <div class="timeline-row">
+                        <div class="timeline-time">09:15</div>
+                        <div class="timeline-node"></div>
+                        <div class="timeline-body">
+                          <h4>Preset applied</h4>
+                          <p>已带出字幕模板、翻译方向和交付规则，无需额外确认。</p>
+                        </div>
+                      </div>
+                      <div class="timeline-row">
+                        <div class="timeline-time">09:16</div>
+                        <div class="timeline-node"></div>
+                        <div class="timeline-body">
+                          <h4>Transcription running</h4>
+                          <p>音轨已提取，系统正在生成分段文本和信心评分。</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="annotation">这个方向最适合突出“为什么失败，而不只是失败了”的产品承诺。</div>
+                  </section>
+                  <div class="grid-2">
+                    <div class="status-card">
+                      <strong class="status-title">Current Pipeline</strong>
+                      <div class="pipeline">
+                        <div class="step done"><strong>下载</strong><span>done</span></div>
+                        <div class="step active"><strong>转录</strong><span>68%</span></div>
+                        <div class="step"><strong>翻译</strong><span>next</span></div>
+                        <div class="step"><strong>烤录</strong><span>next</span></div>
+                        <div class="step"><strong>交付</strong><span>pending</span></div>
+                      </div>
+                    </div>
+                    <div class="failure-box">
+                      <h4>Failure Explanation Pattern</h4>
+                      <p class="supporting">若下载失败，模块直接显示平台限制、重试策略和人工接管入口，而不是仅显示“run failed”。</p>
+                    </div>
+                  </div>
+                </main>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction">
+          <div class="direction-copy">
+            <div class="direction-badge">
+              <span class="chip">Direction 03</span>
+              <strong>Quiet Pipeline</strong>
+            </div>
+            <h2>安静流水线</h2>
+            <p>最“省心”的方向。把任务创建、进展和结果都压得更安静，几乎像在使用一台只在关键时刻说话的机器。</p>
+            <ul class="bullets">
+              <li>最低噪音，最 calm</li>
+              <li>最接近“交出去就等结果”</li>
+              <li>适合强推安心感，但要避免过于含蓄</li>
+            </ul>
+          </div>
+          <div class="preview-shell" data-responsive>
+            <div class="preview-surface">
+              <div class="preview-topbar">
+                <div class="brand"><span class="brand-mark"></span> Yakimoji</div>
+                <div class="top-actions">
+                  <div class="pill">All Deliveries</div>
+                </div>
+              </div>
+              <div class="layout one-col">
+                <main class="main">
+                  <section class="quote-panel">
+                    <div class="eyebrow">Default Workflow</div>
+                    <h4>导入之后，尽量不要再想它。</h4>
+                    <p>系统识别来源、套用预设、开始处理，并只在真正需要你时回来打断你。</p>
+                  </section>
+                  <div class="grid-2">
+                    <section class="task-card">
+                      <div class="section-head">
+                        <div>
+                          <div class="eyebrow">New Task</div>
+                          <h3>Paste or Drop</h3>
+                        </div>
+                        <div class="pill filled">Run</div>
+                      </div>
+                      <div class="hero-upload" style="padding: 28px 24px;">
+                        <strong class="task-title">youtube.com/watch?v=...</strong>
+                        <span class="task-meta">如果识别到熟悉频道，系统会直接按默认规则开跑。</span>
+                      </div>
+                    </section>
+                    <section class="task-card">
+                      <div class="section-head">
+                        <div>
+                          <div class="eyebrow">Now Running</div>
+                          <h3>安心等结果</h3>
+                        </div>
+                        <span class="subpill">Transcription · 68%</span>
+                      </div>
+                      <div class="bar-chart">
+                        <div class="bar">
+                          <span>下载</span>
+                          <div class="bar-track"><div class="bar-fill" style="width:100%"></div></div>
+                          <span>done</span>
+                        </div>
+                        <div class="bar">
+                          <span>转录</span>
+                          <div class="bar-track"><div class="bar-fill" style="width:68%"></div></div>
+                          <span>68%</span>
+                        </div>
+                        <div class="bar">
+                          <span>翻译</span>
+                          <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+                          <span>queued</span>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                  <div class="annotation">方向 03 最像“自动化家电”，但如果异常很多，可能需要补强解释层。</div>
+                </main>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction">
+          <div class="direction-copy">
+            <div class="direction-badge">
+              <span class="chip">Direction 04</span>
+              <strong>Split Studio</strong>
+            </div>
+            <h2>双栏调度台</h2>
+            <p>左侧承接输入和预设，右侧承接流程与结果。结构感最强，也最像专业工作软件，但仍保持较强留白和编辑感。</p>
+            <ul class="bullets">
+              <li>适合桌面端高频使用</li>
+              <li>任务与流程并列，可快速切换</li>
+              <li>工具感更明显，但仍可避免后台化</li>
+            </ul>
+          </div>
+          <div class="preview-shell" data-responsive>
+            <div class="preview-surface">
+              <div class="preview-topbar">
+                <div class="brand"><span class="brand-mark"></span> Yakimoji</div>
+                <div class="top-actions">
+                  <div class="pill">Presets 14</div>
+                  <div class="pill filled">New Run</div>
+                </div>
+              </div>
+              <div class="layout two-col">
+                <aside class="sidebar">
+                  <div class="stack">
+                    <div class="mini-card">
+                      <strong>Paste Source</strong>
+                      <span>拖入文件或粘贴链接，系统会尽量直接开跑。</span>
+                    </div>
+                    <div class="mini-card">
+                      <strong>Matched Preset</strong>
+                      <span>Kurzgesagt CN · 字幕模板 A · 中译中</span>
+                    </div>
+                    <div class="mini-card">
+                      <strong>Or Use Another</strong>
+                      <span>未命中时可切换其他预设，或创建新的最小规则。</span>
+                    </div>
+                  </div>
+                </aside>
+                <main class="main">
+                  <section class="section-card">
+                    <div class="section-head">
+                      <div>
+                        <div class="eyebrow">Run 0248</div>
+                        <h3>From import to delivery</h3>
+                      </div>
+                      <span class="subpill">Started automatically</span>
+                    </div>
+                    <div class="pipeline">
+                      <div class="step done"><strong>下载</strong><span>done</span></div>
+                      <div class="step done"><strong>转录</strong><span>done</span></div>
+                      <div class="step active"><strong>翻译</strong><span>running</span></div>
+                      <div class="step"><strong>烤录</strong><span>queued</span></div>
+                      <div class="step"><strong>交付</strong><span>pending</span></div>
+                    </div>
+                  </section>
+                  <section class="detail-card">
+                    <div class="section-head">
+                      <div>
+                        <div class="eyebrow">Exception Surface</div>
+                        <h3>如果失败，解释层直接在右侧展开。</h3>
+                      </div>
+                    </div>
+                    <div class="failure-box">
+                      <h4>Translation blocked by terminology conflict</h4>
+                      <p class="supporting">系统会标明冲突出现在术语替换规则，而不是仅提示流程失败。支持复用上次可用规则，或跳过冲突项继续运行。</p>
+                    </div>
+                  </section>
+                </main>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction">
+          <div class="direction-copy">
+            <div class="direction-badge">
+              <span class="chip">Direction 05</span>
+              <strong>Linear Control Board</strong>
+            </div>
+            <h2>线性控制板</h2>
+            <p>最偏 Linear 的秩序感。更适合把 Yakimoji 做成高频任务面板，强调清楚、效率和统一规则，视觉个性稍弱但可维护性很强。</p>
+            <ul class="bullets">
+              <li>最容易形成长期工作台习惯</li>
+              <li>结构和状态都很容易扫读</li>
+              <li>需要额外加一点编辑感，避免太像 issue tracker</li>
+            </ul>
+          </div>
+          <div class="preview-shell" data-responsive>
+            <div class="preview-surface">
+              <div class="preview-topbar">
+                <div class="brand"><span class="brand-mark"></span> Yakimoji</div>
+                <div class="top-actions">
+                  <div class="pill">Queue</div>
+                  <div class="pill filled">Create Run</div>
+                </div>
+              </div>
+              <div class="layout one-col">
+                <main class="main">
+                  <section class="section-card">
+                    <div class="section-head">
+                      <div>
+                        <div class="eyebrow">Task Queue</div>
+                        <h3>当前任务队列</h3>
+                      </div>
+                      <p class="meta">所有 run 都带预设来源、当前阶段和风险状态。</p>
+                    </div>
+                    <div class="grid-3">
+                      <div class="mini-card">
+                        <strong>Run 0248</strong>
+                        <span>Preset matched · Translating · No action needed</span>
+                      </div>
+                      <div class="mini-card">
+                        <strong>Run 0247</strong>
+                        <span>Delivery ready · mp4 + srt available</span>
+                      </div>
+                      <div class="mini-card">
+                        <strong>Run 0246</strong>
+                        <span>Needs decision · Unknown channel preset</span>
+                      </div>
+                    </div>
+                  </section>
+                  <div class="grid-2">
+                    <section class="timeline-card">
+                      <div class="section-head">
+                        <div>
+                          <div class="eyebrow">Selected Run</div>
+                          <h3>Run 0248</h3>
+                        </div>
+                        <span class="subpill">Auto-running</span>
+                      </div>
+                      <div class="timeline">
+                        <div class="timeline-row">
+                          <div class="timeline-time">09:14</div>
+                          <div class="timeline-node"></div>
+                          <div class="timeline-body"><h4>Source imported</h4><p>URL accepted and normalized.</p></div>
+                        </div>
+                        <div class="timeline-row">
+                          <div class="timeline-time">09:15</div>
+                          <div class="timeline-node"></div>
+                          <div class="timeline-body"><h4>Preset matched</h4><p>Kurzgesagt CN selected automatically.</p></div>
+                        </div>
+                      </div>
+                    </section>
+                    <section class="detail-card">
+                      <div class="section-head">
+                        <div>
+                          <div class="eyebrow">Quick Start</div>
+                          <h3>导入永远在前景</h3>
+                        </div>
+                      </div>
+                      <div class="hero-upload" style="padding: 24px;">
+                        <strong class="task-title">Paste URL or drop a file</strong>
+                        <span class="task-meta">如果识别成功，系统会立即开始处理。</span>
+                      </div>
+                    </section>
+                  </div>
+                </main>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction">
+          <div class="direction-copy">
+            <div class="direction-badge">
+              <span class="chip">Direction 06</span>
+              <strong>Delivery Room</strong>
+            </div>
+            <h2>交付室</h2>
+            <p>把“成品交付”放在最强终点位置。首页既看到新任务入口，也看到最近完成成果，强调这套系统最终是在交付可发布结果。</p>
+            <ul class="bullets">
+              <li>最强调结果导向</li>
+              <li>适合突出“自动化跑完一次流程”的成就感</li>
+              <li>需要控制好，不要弱化处理中流程的可信度</li>
+            </ul>
+          </div>
+          <div class="preview-shell" data-responsive>
+            <div class="preview-surface">
+              <div class="preview-topbar">
+                <div class="brand"><span class="brand-mark"></span> Yakimoji</div>
+                <div class="top-actions">
+                  <div class="pill">Recent Deliveries</div>
+                  <div class="pill filled">Start New Run</div>
+                </div>
+              </div>
+              <div class="layout one-col">
+                <main class="main">
+                  <section class="section-card">
+                    <div class="section-head">
+                      <div>
+                        <div class="eyebrow">Ready to Publish</div>
+                        <h3>系统完成的不是任务，而是可交付结果。</h3>
+                      </div>
+                      <div class="pill filled">Download mp4 + srt</div>
+                    </div>
+                    <div class="grid-2">
+                      <div class="quote-panel">
+                        <h4>Run 0247 delivered.</h4>
+                        <p>Video rendered, subtitle file attached, and the default preset has been confirmed for reuse.</p>
+                      </div>
+                      <div class="stack">
+                        <div class="mini-card">
+                          <strong>Latest preset signal</strong>
+                          <span>本次流程成功复用同一频道预设，无需额外覆盖。</span>
+                        </div>
+                        <div class="mini-card">
+                          <strong>Next best action</strong>
+                          <span>立即继续导入下一条来源，让系统按同规则开跑。</span>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                  <div class="grid-2">
+                    <section class="task-card">
+                      <div class="section-head">
+                        <div>
+                          <div class="eyebrow">Start Another</div>
+                          <h3>把下一条继续交给系统。</h3>
+                        </div>
+                      </div>
+                      <div class="hero-upload" style="padding: 24px;">
+                        <strong class="task-title">Drop next source</strong>
+                        <span class="task-meta">这是最像“固定入口”的版本，回访动力最强。</span>
+                      </div>
+                    </section>
+                    <section class="status-card">
+                      <div class="section-head">
+                        <div>
+                          <div class="eyebrow">Another Run</div>
+                          <h3>Run 0248 is still running</h3>
+                        </div>
+                      </div>
+                      <div class="pipeline">
+                        <div class="step done"><strong>下载</strong><span>done</span></div>
+                        <div class="step done"><strong>转录</strong><span>done</span></div>
+                        <div class="step active"><strong>翻译</strong><span>running</span></div>
+                        <div class="step"><strong>烤录</strong><span>queued</span></div>
+                        <div class="step"><strong>交付</strong><span>pending</span></div>
+                      </div>
+                    </section>
+                  </div>
+                  <div class="annotation">Direction 06 最强调“跑完一次后的成就感”，适合把复用率和交付感做成用户回访驱动力。</div>
+                </main>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="section-card" style="margin-top: var(--space-9);">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Evaluation Framework</div>
+            <h3>推荐你这样比较这些方向</h3>
+          </div>
+          <p class="meta">不要先问“哪个更好看”，先问“哪个更像 Yakimoji 要成为的那种工具”。</p>
+        </div>
+        <div class="evaluation">
+          <div class="mini-card">
+            <strong>1. 导入是否像交付任务</strong>
+            <span>入口是否足够轻，是否像“立即开跑”而不是“先配一遍”。</span>
+          </div>
+          <div class="mini-card">
+            <strong>2. 流程是否可托付</strong>
+            <span>处理中状态、失败解释和下一步动作是否够清楚。</span>
+          </div>
+          <div class="mini-card">
+            <strong>3. 是否专业但克制</strong>
+            <span>有没有避免重后台、复杂编辑器和花哨 AI 工具感。</span>
+          </div>
+          <div class="mini-card">
+            <strong>4. 回访动力是否成立</strong>
+            <span>用户第二次回来时，是否会想“继续把下一条交给它”。</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="footer">
+        文件位置：`_bmad-output/planning-artifacts/ux-design-directions.html`
+      </div>
+    </div>
+
+    <script>
+      const shells = document.querySelectorAll("[data-responsive]");
+      const buttons = document.querySelectorAll("[data-mode]");
+      const toggle = document.getElementById("toggle-annotations");
+      let annotationsVisible = true;
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const mode = button.dataset.mode;
+          buttons.forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+          shells.forEach((shell) => {
+            if (mode === "mobile") {
+              shell.classList.add("compact");
+            } else {
+              shell.classList.remove("compact");
+            }
+          });
+        });
+      });
+
+      toggle.addEventListener("click", () => {
+        annotationsVisible = !annotationsVisible;
+        toggle.setAttribute("aria-pressed", String(annotationsVisible));
+        toggle.textContent = annotationsVisible ? "Show Notes" : "Hide Notes";
+        document.querySelectorAll(".preview-surface").forEach((surface) => {
+          if (annotationsVisible) {
+            surface.classList.remove("annotations-hidden");
+          } else {
+            surface.classList.add("annotations-hidden");
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
