@@ -1,0 +1,77 @@
+# generated: 2026-05-20T23:45:41+0800
+# last_updated: 2026-05-20T23:45:41+0800
+# project: Yakimoji
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: /Users/youranreus/Code/Projects/Yakimoji/_bmad-output/implementation-artifacts
+#
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog -> in-progress: Automatically when first story is created (via create-story)
+#   - in-progress -> done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review in a fresh context
+
+generated: 2026-05-20T23:45:41+0800
+last_updated: 2026-05-20T23:45:41+0800
+project: Yakimoji
+project_key: NOKEY
+tracking_system: file-system
+story_location: /Users/youranreus/Code/Projects/Yakimoji/_bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: backlog
+  1-1-initialize-the-product-from-the-approved-starter-template: backlog
+  1-2-creator-login-and-protected-workspace-shell: backlog
+  1-3-manual-task-intake-with-source-recognition-preview: backlog
+  1-4-task-lifecycle-state-model-and-persistent-event-ledger: backlog
+  1-5-creator-task-list-and-detail-status-views: backlog
+  1-6-task-status-sync-via-sse-with-polling-fallback: backlog
+  1-7-completed-deliverables-and-secure-result-access: backlog
+  epic-1-retrospective: optional
+  epic-2: backlog
+  2-1-create-and-manage-channel-presets: backlog
+  2-2-resolve-preset-match-for-familiar-sources: backlog
+  2-3-unknown-source-manual-resolution: backlog
+  2-4-task-level-subtitle-template-override-on-top-of-presets: backlog
+  epic-2-retrospective: optional
+  epic-3: backlog
+  3-1-low-confidence-review-queue-for-creators: backlog
+  3-2-failure-explanation-and-retry-to-new-attempt-recovery: backlog
+  3-3-support-timeline-and-diagnostic-context: backlog
+  epic-3-retrospective: optional
+  epic-4: backlog
+  4-1-api-credential-validation-and-task-create-request: backlog
+  4-2-api-task-status-and-result-query-contract: backlog
+  4-3-structured-failure-and-non-match-api-responses: backlog
+  epic-4-retrospective: optional
+  epic-5: backlog
+  5-1-mobile-task-visibility-and-deliverable-access: backlog
+  5-2-mobile-low-confidence-approve-or-reopen-flow: backlog
+  epic-5-retrospective: optional
+  epic-6: backlog
+  6-1-operations-visibility-dashboard-for-preset-reuse-and-task-flow: backlog
+  6-2-minimum-audit-record-and-queryable-task-history: backlog
+  epic-6-retrospective: optional
