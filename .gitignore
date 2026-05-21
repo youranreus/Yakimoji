@@ -22,3 +22,6 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
+
+# Story automator runtime marker
+.claude/.story-automator-active
