@@ -22,6 +22,10 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
-
-# Story automator runtime marker
-.claude/.story-automator-active
+.home
+.npm-cache
+.pnpm-store
+.pnpm-home
+.local-share
+.local-state
+.react-router

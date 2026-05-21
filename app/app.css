@@ -1,0 +1,119 @@
+:root {
+  color-scheme: light;
+  --bg: #f3f0e8;
+  --panel: rgba(255, 252, 246, 0.92);
+  --panel-border: rgba(41, 37, 36, 0.12);
+  --ink: #1f2937;
+  --muted: #57534e;
+  --accent: #8f4e17;
+  --accent-soft: rgba(143, 78, 23, 0.12);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(143, 78, 23, 0.15), transparent 28rem),
+    linear-gradient(180deg, #f9f7f1 0%, var(--bg) 100%);
+  color: var(--ink);
+}
+
+body {
+  min-height: 100vh;
+}
+
+.app-shell {
+  width: min(1100px, calc(100vw - 2rem));
+  margin: 0 auto;
+  padding: 3rem 0 4rem;
+}
+
+.shell-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.shell-panel {
+  border: 1px solid var(--panel-border);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  background: var(--panel);
+  box-shadow: 0 20px 45px rgba(28, 25, 23, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.shell-hero {
+  margin-bottom: 1.25rem;
+}
+
+.shell-meta {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.shell-meta span {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.lede {
+  max-width: 42rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.shell-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.error-shell,
+.health-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+pre {
+  overflow: auto;
+  white-space: pre-wrap;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: #1c1917;
+  color: #f5f5f4;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    width: min(100vw - 1rem, 1100px);
+    padding: 1rem 0 2rem;
+  }
+
+  .shell-panel {
+    padding: 1.25rem;
+    border-radius: 1.2rem;
+  }
+}

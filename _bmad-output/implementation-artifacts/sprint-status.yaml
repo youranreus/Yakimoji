@@ -1,5 +1,5 @@
 # generated: 2026-05-20T23:45:41+0800
-# last_updated: 2026-05-20T23:45:41+0800
+# last_updated: 2026-05-21T20:59:02+0800
 # project: Yakimoji
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,15 +35,15 @@
 # - Dev moves story to 'review', then runs code-review in a fresh context
 
 generated: 2026-05-20T23:45:41+0800
-last_updated: 2026-05-20T23:45:41+0800
+last_updated: 2026-05-21T20:59:02+0800
 project: Yakimoji
 project_key: NOKEY
 tracking_system: file-system
 story_location: /Users/youranreus/Code/Projects/Yakimoji/_bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: backlog
-  1-1-initialize-the-product-from-the-approved-starter-template: backlog
+  epic-1: in-progress
+  1-1-initialize-the-product-from-the-approved-starter-template: in-progress
   1-2-creator-login-and-protected-workspace-shell: backlog
   1-3-manual-task-intake-with-source-recognition-preview: backlog
   1-4-task-lifecycle-state-model-and-persistent-event-ledger: backlog

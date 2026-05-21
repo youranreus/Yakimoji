@@ -1,13 +1,47 @@
 {
-  "name": "Yakimoji",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "yakimoji",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "react-router build",
+    "db:generate": "dotenv -- drizzle-kit generate",
+    "db:migrate": "dotenv -- drizzle-kit migrate",
+    "dev": "dotenv -- node server.js",
+    "start": "node server.js",
+    "typecheck": "react-router typegen && tsc -b",
+    "test": "node --test tests/*.test.mjs tests/api/*.test.mjs tests/e2e/*.test.mjs",
+    "verify:scaffold": "node ./tests/verify-scaffold.mjs"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.33.0"
+  "dependencies": {
+    "@react-router/express": "7.14.0",
+    "@react-router/node": "7.14.0",
+    "compression": "^1.8.0",
+    "drizzle-orm": "~0.36.3",
+    "express": "^5.2.1",
+    "isbot": "^5.1.36",
+    "morgan": "^1.10.0",
+    "postgres": "^3.4.8",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router": "7.14.0"
+  },
+  "devDependencies": {
+    "@react-router/dev": "7.14.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/compression": "^1.7.5",
+    "@types/express": "^5.0.6",
+    "@types/express-serve-static-core": "^5.1.1",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^20",
+    "@types/pg": "^8.18.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "dotenv-cli": "^8.0.0",
+    "drizzle-kit": "~0.28.1",
+    "tailwindcss": "^4.2.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.3"
+  }
 }
