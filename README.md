@@ -1,6 +1,6 @@
 # Yakimoji
 
-Yakimoji 现已对齐到 Epic 1 Story 1.1 要求的 React Router Framework Mode `node-postgres` 工程基线。当前仓库只提供最小可运行工作台壳层、Express server 边界，以及 PostgreSQL + Drizzle migration 链路入口，不包含登录、任务、预设、review 或交付能力实现。
+Yakimoji 现已完成 Epic 1 Story 1.2 的最小认证闭环：基于 React Router Framework Mode `node-postgres` 基线，提供公开登录入口、服务端 SSO 回调、本地 session、最小 RBAC、请求级 `request_id` 与受保护工作台壳层。任务、预设、review 与交付能力仍会在后续 story 中继续接入。
 
 ## Quick Start
 
@@ -24,12 +24,21 @@ pnpm dev
 ```
 
 5. 访问：
-   - 工作台壳层：`http://localhost:3000/`
+   - 公开登录入口：`http://localhost:3000/login`
+   - 受保护工作台：`http://localhost:3000/workspace`
    - 健康检查：`http://localhost:3000/health`
 
 ## Database and Migrations
 
-Story 1.1 只建立 Drizzle migration 能力，不预建业务域表。当前最小 schema 为 `starter_health_checks`，用于证明 Drizzle -> PostgreSQL 链路已接通。
+Story 1.2 在保留 `starter_health_checks` 的基础上，新增了认证与审计最小模型：
+
+- `users`
+- `sso_accounts`
+- `user_role_assignments`
+- `sessions`
+- `audit_logs`
+
+浏览器 cookie 只保存 Yakimoji 本地 session 标识；真实 session 状态、角色判定与审计记录都持久化在服务端和数据库中。
 
 常用命令：
 
@@ -52,6 +61,12 @@ postgres://postgres:postgres@localhost:5432/yakimoji
 | --- | --- | --- |
 | `NODE_ENV` | 运行环境，默认 `development` | 否 |
 | `DATABASE_URL` | PostgreSQL 连接串，Drizzle 与服务端都会读取 | 是 |
+| `SESSION_SECRET` | Yakimoji 本地 session / SSO state cookie 签名密钥 | 是 |
+| `SSO_BASE_URL` | 上游 SSO 服务基础地址，服务端会调用 `/oauth/authorize`、`/oauth/token`、`/oauth/user` | 是 |
+| `SSO_CLIENT_ID` | SSO client id | 是 |
+| `SSO_CLIENT_SECRET` | SSO client secret | 是 |
+| `SSO_CALLBACK_URL` | Yakimoji SSO 回调地址，默认 `http://localhost:3000/auth/callback` | 是 |
+| `SSO_PROVIDER_NAME` | 本地 SSO provider 标识，默认 `yakimoji-sso` | 否 |
 | `PORT` | HTTP 端口，默认 `3000` | 否 |
 
 ## Verification
@@ -79,8 +94,8 @@ pnpm start
 当前仓库已在本地完成依赖安装、类型检查、构建、离线结构测试，以及一次针对已配置 PostgreSQL 的 Drizzle 验证，因此目前已证明：
 
 - 官方 starter 等价结构与脚本对齐
-- React Router Framework Mode 最小入口与路由壳
-- `.server` 边界与 Drizzle 配置
+- React Router Framework Mode 公开登录入口与受保护工作台壳层
+- `.server` 边界、SSO adapter、本地 session 与 Drizzle 配置
 - 依赖安装、类型检查、构建与离线结构验证测试
 - `pnpm db:generate`
 - `pnpm db:migrate`
@@ -92,17 +107,16 @@ pnpm start
 - 这类失败受 GitHub 可达性、认证与网络环境影响，不应被当成 Yakimoji 工程基线的一部分。
 - 当前更稳定的验收依据，是仓库内脚本、目录结构、React Router Framework Mode、Express server 边界与 Drizzle 工作流已经与目标 starter 形态对齐，并通过本地构建与验证命令证明可运行。
 
-## Story 1.1 Scope Boundaries
+## Story 1.2 Scope Boundaries
 
-以下业务能力明确不在 Story 1.1 内：
+以下业务能力明确不在 Story 1.2 内：
 
-- Creator 登录与受保护工作台
 - 任务导入、状态流转、事件时间线
 - 频道预设管理与自动匹配
 - 低置信度 review 工作流
 - Deliverable 生成、授权下载与审计
 
-当前代码中的 `app/features/*` 与 `app/features/auth/server/session.server.ts` 仅作为后续故事的边界占位，不应被视为已实现能力。
+当前实现只证明“SSO 身份 -> Yakimoji 本地 session -> 本地 RBAC -> 受保护工作台 -> 最小审计”的闭环成立，不应被视为任务域或交付域已经可用。
 
 ## Codex Hook 说明
 

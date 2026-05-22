@@ -9,7 +9,7 @@ test("README documents startup, migrations, env vars, and out-of-scope business 
   assert.match(readme, /## Quick Start/);
   assert.match(readme, /## Database and Migrations/);
   assert.match(readme, /## Environment Variables/);
-  assert.match(readme, /## Story 1\.1 Scope Boundaries/);
+  assert.match(readme, /## Story 1\.2 Scope Boundaries/);
   assert.match(readme, /pnpm build/);
   assert.match(readme, /pnpm db:generate/);
   assert.match(readme, /pnpm db:migrate/);
@@ -18,4 +18,7 @@ test("README documents startup, migrations, env vars, and out-of-scope business 
   assert.doesNotMatch(readme, /GitHub 模板抓取阶段返回了 `403`/);
   assert.match(readme, /auth/i);
   assert.match(readme, /deliverable/i);
+  assert.match(readme, /SESSION_SECRET/);
+  assert.match(readme, /SSO_BASE_URL/);
+  assert.match(readme, /\/workspace/);
 });

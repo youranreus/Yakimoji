@@ -13,10 +13,20 @@ const requiredFiles = [
   "app/root.tsx",
   "app/routes.ts",
   "app/routes/home.tsx",
+  "app/routes/login.tsx",
+  "app/routes/auth.callback.tsx",
+  "app/routes/logout.tsx",
+  "app/routes/workspace.tsx",
   "app/routes/health.tsx",
   "app/server/env.server.ts",
+  "app/features/auth/server/auth-flow.server.ts",
+  "app/features/auth/server/authz.server.ts",
+  "app/features/auth/server/request-context.server.ts",
+  "app/features/auth/server/sso-adapter.server.ts",
   "database/context.ts",
   "database/schema/index.ts",
+  "database/schema/auth.ts",
+  "database/schema/health.ts",
 ];
 
 const missingFiles = requiredFiles.filter(

@@ -9,11 +9,10 @@ const repoRoot = process.cwd();
 
 const homeModulePromise = loadTransformedModule("app/routes/home.tsx", [
   [/import type { Route } from "\.\/\+types\/home";\n/, ""],
-  [/import { WorkspaceShell } from "~\/shared\/ui\/WorkspaceShell";\n/, ""],
-  [/export function meta\(\{\}: Route\.MetaArgs\)/, "export function meta()"],
+  [/import { getOptionalUserSession } from "~\/features\/auth\/server\/session\.server";\n/, "const getOptionalUserSession = async () => null;\n"],
   [
-    /export async function loader\(\{ context \}: Route\.LoaderArgs\)/,
-    "export async function loader({ context })",
+    /export async function loader\(\{ request \}: Route\.LoaderArgs\)/,
+    "export async function loader({ request })",
   ],
   [/export default function Home\([\s\S]*$/, ""],
 ]);
@@ -22,51 +21,26 @@ function readText(filePath) {
   return fs.readFileSync(path.join(repoRoot, filePath), "utf8");
 }
 
-test("workspace landing flow exposes the approved metadata and baseline loader payload", async () => {
+test("workspace landing flow redirects anonymous users into the protected login entry", async () => {
   const homeModule = await homeModulePromise;
-
-  assert.deepEqual(homeModule.meta(), [
-    { title: "Yakimoji Workspace" },
-    {
-      name: "description",
-      content:
-        "Minimal React Router workspace shell aligned to the approved node-postgres starter.",
-    },
-  ]);
-
-  const payload = await homeModule.loader({
-    context: {
-      releaseStage: "test",
-      serviceName: "yakimoji",
-    },
+  const response = await homeModule.loader({
+    request: new Request("http://localhost:3000/"),
   });
 
-  assert.equal(payload.runtime, "test");
-  assert.equal(payload.serviceName, "yakimoji");
-  assert.deepEqual(payload.pendingDomains, [
-    "Creator login and protected workspace shell",
-    "Manual task intake and source recognition",
-    "Preset management and matching",
-    "Review queue and deliverable access",
-  ]);
-  assert.equal(payload.boundaries.length, 3);
-  assert.match(payload.boundaries[0], /Route-first application shell/);
-  assert.match(payload.boundaries[1], /session, SSO, secrets and signed-download logic/);
-  assert.match(payload.boundaries[2], /PostgreSQL \+ Drizzle migration chain configured/);
+  assert.ok(response instanceof Response);
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get("Location"), "http://localhost:3000/login");
 });
 
 test("workspace shell copy exposes the visible dashboard affordances for the user journey", () => {
   const workspaceShell = readText("app/shared/ui/WorkspaceShell.tsx");
 
-  assert.match(workspaceShell, /Workspace Baseline/);
-  assert.match(workspaceShell, /Ready Boundaries/);
-  assert.match(workspaceShell, /Pending Domains/);
-  assert.match(workspaceShell, /Health path: \/health/);
-  assert.match(workspaceShell, /Minimal dashboard shell aligned to the approved React Router/);
-  assert.match(
-    workspaceShell,
-    /auth,\s+task orchestration, presets, review, and deliverables/,
-  );
+  assert.match(workspaceShell, /Protected Workspace/);
+  assert.match(workspaceShell, /Global Navigation/);
+  assert.match(workspaceShell, /Main Content/);
+  assert.match(workspaceShell, /request_id:/);
+  assert.match(workspaceShell, /HttpOnly 的 Yakimoji session cookie/);
+  assert.match(workspaceShell, /SSO 只负责身份认证/);
 });
 
 test("root document and error boundary preserve the baseline error experience", () => {
@@ -76,6 +50,7 @@ test("root document and error boundary preserve the baseline error experience", 
   assert.match(root, /<html lang="zh-CN">/);
   assert.match(root, /Yakimoji workspace error/);
   assert.match(root, /The requested route does not exist\./);
-  assert.match(routes, /index\("routes\/home\.tsx"\)/);
+  assert.match(routes, /route\("login", "routes\/login\.tsx"\)/);
+  assert.match(routes, /route\("workspace", "routes\/workspace\.tsx"\)/);
   assert.match(routes, /route\("health", "routes\/health\.tsx"\)/);
 });

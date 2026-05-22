@@ -1,36 +1,12 @@
 import type { Route } from "./+types/home";
-import { WorkspaceShell } from "~/shared/ui/WorkspaceShell";
+import { getOptionalUserSession } from "~/features/auth/server/session.server";
 
-const pendingDomains = [
-  "Creator login and protected workspace shell",
-  "Manual task intake and source recognition",
-  "Preset management and matching",
-  "Review queue and deliverable access",
-];
+export async function loader({ request }: Route.LoaderArgs) {
+  const current = await getOptionalUserSession(request);
 
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Yakimoji Workspace" },
-    {
-      name: "description",
-      content: "Minimal React Router workspace shell aligned to the approved node-postgres starter.",
-    },
-  ];
+  return Response.redirect(new URL(current ? "/workspace" : "/login", request.url));
 }
 
-export async function loader({ context }: Route.LoaderArgs) {
-  return {
-    runtime: context.releaseStage,
-    serviceName: context.serviceName,
-    pendingDomains,
-    boundaries: [
-      "Route-first application shell in React Router Framework Mode",
-      "Node + Express server boundary reserved for session, SSO, secrets and signed-download logic",
-      "PostgreSQL + Drizzle migration chain configured, but no business domain tables prebuilt",
-    ],
-  };
-}
-
-export default function Home({ loaderData }: Route.ComponentProps) {
-  return <WorkspaceShell {...loaderData} />;
+export default function Home(_: Route.ComponentProps) {
+  return null;
 }

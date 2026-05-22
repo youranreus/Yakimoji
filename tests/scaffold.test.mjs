@@ -34,10 +34,20 @@ test("route and server-only boundaries exist for the workspace shell", () => {
   const routes = readText("app/routes.ts");
 
   assert.match(routes, /index\("routes\/home\.tsx"\)/);
+  assert.match(routes, /route\("login", "routes\/login\.tsx"\)/);
+  assert.match(routes, /route\("auth\/callback", "routes\/auth\.callback\.tsx"\)/);
+  assert.match(routes, /route\("logout", "routes\/logout\.tsx"\)/);
+  assert.match(routes, /route\("workspace", "routes\/workspace\.tsx"\)/);
   assert.match(routes, /route\("health", "routes\/health\.tsx"\)/);
   assert.ok(fs.existsSync(path.join(repoRoot, "app/server/env.server.ts")));
   assert.ok(
     fs.existsSync(path.join(repoRoot, "app/features/auth/server/session.server.ts")),
+  );
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, "app/features/auth/server/sso-adapter.server.ts")),
+  );
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, "app/features/auth/server/authz.server.ts")),
   );
 });
 
@@ -45,6 +55,8 @@ test("drizzle scaffold and feature boundaries are present without business imple
   assert.ok(fs.existsSync(path.join(repoRoot, "drizzle.config.ts")));
   assert.ok(fs.existsSync(path.join(repoRoot, "database/context.ts")));
   assert.ok(fs.existsSync(path.join(repoRoot, "database/schema/index.ts")));
+  assert.ok(fs.existsSync(path.join(repoRoot, "database/schema/auth.ts")));
+  assert.ok(fs.existsSync(path.join(repoRoot, "database/schema/health.ts")));
   assert.ok(fs.existsSync(path.join(repoRoot, "app/features/tasks/.gitkeep")));
   assert.ok(fs.existsSync(path.join(repoRoot, "app/features/presets/.gitkeep")));
   assert.ok(fs.existsSync(path.join(repoRoot, "app/features/reviews/.gitkeep")));

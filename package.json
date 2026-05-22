@@ -10,7 +10,7 @@
     "dev": "dotenv -- node server.js",
     "start": "NODE_ENV=production node server.js",
     "typecheck": "react-router typegen && tsc -b",
-    "test": "node --test tests/*.test.mjs tests/api/*.test.mjs tests/e2e/*.test.mjs",
+    "test": "node --import tsx --test tests/*.test.mjs tests/*.test.ts tests/api/*.test.mjs tests/e2e/*.test.mjs",
     "verify:scaffold": "node ./tests/verify-scaffold.mjs"
   },
   "dependencies": {
