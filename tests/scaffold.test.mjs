@@ -22,6 +22,7 @@ test("package.json aligns to the approved node-postgres starter baseline", () =>
   assert.equal(pkg.scripts["db:generate"], "dotenv -- drizzle-kit generate");
   assert.equal(pkg.scripts["db:migrate"], "dotenv -- drizzle-kit migrate");
   assert.equal(pkg.scripts.dev, "dotenv -- node server.js");
+  assert.equal(pkg.scripts.start, "NODE_ENV=production node server.js");
   assert.ok(pkg.dependencies["react-router"]);
   assert.ok(pkg.dependencies["postgres"]);
   assert.ok(pkg.dependencies["drizzle-orm"]);

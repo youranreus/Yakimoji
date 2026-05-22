@@ -69,9 +69,11 @@ pnpm verify:scaffold
 pnpm install
 pnpm typecheck
 pnpm test
+pnpm build
 pnpm db:generate
 pnpm db:migrate
 pnpm dev
+pnpm start
 ```
 
 当前仓库已在本地完成依赖安装、类型检查、构建、离线结构测试，以及一次针对已配置 PostgreSQL 的 Drizzle 验证，因此目前已证明：
@@ -82,12 +84,13 @@ pnpm dev
 - 依赖安装、类型检查、构建与离线结构验证测试
 - `pnpm db:generate`
 - `pnpm db:migrate`
+- `pnpm start` 在显式生产模式下加载构建产物
 
-尚未完全补齐的只剩一项证据：
+关于官方 starter 重放验证：
 
-- 使用 `npx create-react-router@latest --template remix-run/react-router-templates/node-postgres` 在临时目录重放官方 starter 初始化。当前尝试在 GitHub 模板抓取阶段返回了 `403`，因此这一步还没有形成可重复证据。
-
-这不影响当前仓库已经通过的数据库 migration 验证，但 Story 1.1 仍保留这一未闭合项以便后续补证。
+- 本 story 曾在临时目录尝试复现 `npx create-react-router@latest --template remix-run/react-router-templates/node-postgres`，期间遇到过外部模板抓取失败。
+- 这类失败受 GitHub 可达性、认证与网络环境影响，不应被当成 Yakimoji 工程基线的一部分。
+- 当前更稳定的验收依据，是仓库内脚本、目录结构、React Router Framework Mode、Express server 边界与 Drizzle 工作流已经与目标 starter 形态对齐，并通过本地构建与验证命令证明可运行。
 
 ## Story 1.1 Scope Boundaries
 

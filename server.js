@@ -3,7 +3,7 @@ import express from "express";
 import morgan from "morgan";
 
 const BUILD_PATH = "./build/server/index.js";
-const NODE_ENV = process.env.NODE_ENV ?? "development";
+const NODE_ENV = process.env.NODE_ENV;
 const DEVELOPMENT = NODE_ENV !== "production";
 const PORT = Number.parseInt(process.env.PORT || "3000", 10);
 

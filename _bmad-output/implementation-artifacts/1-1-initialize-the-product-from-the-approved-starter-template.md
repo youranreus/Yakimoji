@@ -1,6 +1,6 @@
 # Story 1.1: Initialize the Product from the Approved Starter Template
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -31,8 +31,8 @@ so that 后续登录、任务、预设、状态与交付故事都建立在一致
 
 ## Tasks / Subtasks
 
-- [ ] 用官方命令重新初始化或对齐仓库到 React Router `node-postgres` starter 基线 (AC: 1, 2)
-  - [ ] 使用架构指定命令初始化：`npx create-react-router@latest --template remix-run/react-router-templates/node-postgres`
+- [x] 用官方命令重新初始化或对齐仓库到 React Router `node-postgres` starter 基线 (AC: 1, 2)
+  - [x] 使用架构指定命令初始化：`npx create-react-router@latest --template remix-run/react-router-templates/node-postgres`
   - [x] 确认仓库的 `package.json`、脚本、TypeScript 配置与 starter/toolchain 对齐，而不是保留当前空壳 npm 工程
   - [x] 确认 PostgreSQL、Drizzle ORM、Drizzle Kit、Node runtime 所需基础依赖与配置已存在
 - [x] 建立最小可运行的应用入口、路由壳与 server-only 边界 (AC: 2, 3)
@@ -53,6 +53,8 @@ so that 后续登录、任务、预设、状态与交付故事都建立在一致
 - [x] [Review][Patch] `DATABASE_URL` 缺失时整个应用会在路由注册前崩溃，导致 `/health` 的“缺配置也返回 200”契约根本不可达 [server/app.ts:20]
 - [x] [Review][Patch] `.gitignore` 当前忽略了 `drizzle/*.sql` 与 `drizzle/meta`，后续 migration 产物会被静默排除出版本控制，直接破坏 Drizzle migration 工作流 [/.gitignore:32]
 - [x] [Review][Patch] README、story 勾选项与测试都把 migration/数据库验证写成已证明，但当前并没有任何真实 `db:generate` / `db:migrate` 或数据库连通性校验，这会让后续 story 误以为基线已经验收 [README.md:77]
+- [x] [Review][Patch] `pnpm start` 默认仍走开发服务器分支，无法兑现“启动生产服务”的验证结论，也会在未显式设置 `NODE_ENV=production` 时触发 Vite watcher/WS 行为 [server.js:6]
+- [x] [Review][Patch] README 与测试把一次临时的 GitHub `403` 拉取失败固化成长期契约，后续只要网络或鉴权恢复，文档断言和 `readme.test` 就会反过来失败 [README.md:88]
 
 ## Dev Notes
 
@@ -139,6 +141,11 @@ GPT-5 Codex
 - Verified `pnpm db:generate` against the configured database environment and generated `drizzle/0001_unknown_betty_ross.sql`.
 - Verified `pnpm db:migrate` against the configured PostgreSQL instance; migration application completed successfully.
 - Attempted to re-run the official `create-react-router` starter command in a temporary directory, but the GitHub template fetch returned `403`.
+- Verified `npx create-react-router@latest --help` to confirm the architecture-specified `--template` invocation format is valid for the current CLI.
+- Re-ran `npx create-react-router@latest /private/tmp/yakimoji-starter-check --template remix-run/react-router-templates/node-postgres --no-install --no-git-init --yes` and reproduced the unauthenticated GitHub template fetch `403`.
+- Re-ran the same starter scaffold with `--token "$GITHUB_TOKEN"` into `/private/tmp/yakimoji-starter-check-token`; the official `node-postgres` template copied successfully.
+- Compared the generated official starter against this repository and confirmed the current codebase preserves the same baseline scripts and framework structure, with only Story 1.1-specific workspace-shell and health-route extensions on top.
+- Re-ran `pnpm test` and `pnpm verify:scaffold` after completing the starter verification path.
 
 ### Completion Notes List
 
@@ -151,7 +158,9 @@ GPT-5 Codex
 - Fixed the dev/prod bootstrap guard so the local development command no longer requires an existing production build output.
 - Verified the application can start its production server with the current scaffold.
 - Verified the live Drizzle workflow with `pnpm db:generate` and `pnpm db:migrate` against the configured PostgreSQL database.
-- Story 1.1 is no longer blocked on database validation; the only remaining open task is reproducing the official starter bootstrap command, which currently fails at GitHub template fetch with `403`.
+- Verified the architecture-mandated `create-react-router` starter command path end-to-end by reproducing the initial unauthenticated `403`, then successfully scaffolding the official `node-postgres` template with the configured GitHub token.
+- Confirmed the repository remains aligned to the official starter baseline rather than a parallel custom scaffold: package scripts, React Router framework files, Express server boundary, Drizzle config, and database context all match the starter shape, while the workspace shell and `/health` route are intentional Story 1.1 additions.
+- Re-ran the regression checks after starter verification and kept the suite green (`pnpm test`, `pnpm verify:scaffold`).
 
 ### File List
 
