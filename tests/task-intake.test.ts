@@ -26,58 +26,96 @@ function makeUrlEncodedRequest(body: Record<string, string>, requestId = "req_ta
 function createFakeDb() {
   const draftRows = new Map<string, Record<string, unknown>>();
   const taskRows: Array<Record<string, unknown>> = [];
+  const taskEventRows: Array<Record<string, unknown>> = [];
 
-  return {
-    draftRows,
-    taskRows,
-    db: {
-      insert(table: any) {
-        return {
-          async values(values: Record<string, unknown>) {
-            const tableName = table[Symbol.for("drizzle:Name")] ?? "unknown";
+  const db = {
+    async transaction<T>(callback: (tx: typeof db) => Promise<T>) {
+      return callback(db);
+    },
+    insert(table: any) {
+      return {
+        async values(values: Record<string, unknown>) {
+          const tableName = table[Symbol.for("drizzle:Name")] ?? "unknown";
 
-            if (tableName === "task_intake_drafts") {
-              draftRows.set(String(values.token), { ...values });
-              return;
-            }
+          if (tableName === "task_intake_drafts") {
+            draftRows.set(String(values.token), { ...values });
+            return;
+          }
 
-            if (tableName === "tasks") {
-              taskRows.push({ ...values });
-            }
-          },
-        };
-      },
-      delete(table: any) {
-        const tableName = table[Symbol.for("drizzle:Name")] ?? "unknown";
+          if (tableName === "tasks") {
+            taskRows.push({ ...values });
+            return;
+          }
 
-        return {
-          where() {
-            return {
-              async returning(selection: Record<string, unknown>) {
-                if (tableName === "task_intake_drafts") {
-                  if ("uploadStorageKey" in selection && Object.keys(selection).length === 1) {
-                    return [];
-                  }
+          if (tableName === "task_events") {
+            taskEventRows.push({ ...values });
+          }
+        },
+      };
+    },
+    delete(table: any) {
+      const tableName = table[Symbol.for("drizzle:Name")] ?? "unknown";
 
-                  const [firstEntry] = draftRows.entries();
-
-                  if (!firstEntry) {
-                    return [];
-                  }
-
-                  draftRows.delete(firstEntry[0]);
-                  return [firstEntry[1]];
+      return {
+        where() {
+          return {
+            async returning(selection: Record<string, unknown>) {
+              if (tableName === "task_intake_drafts") {
+                if ("uploadStorageKey" in selection && Object.keys(selection).length === 1) {
+                  return [];
                 }
 
-                return [];
-              },
-            };
-          },
-        };
-      },
-      select(selection: Record<string, unknown>) {
-        return {
-          from() {
+                const [firstEntry] = draftRows.entries();
+
+                if (!firstEntry) {
+                  return [];
+                }
+
+                draftRows.delete(firstEntry[0]);
+                return [firstEntry[1]];
+              }
+
+              return [];
+            },
+          };
+        },
+      };
+    },
+    update(table: any) {
+      return {
+        set(values: Record<string, unknown>) {
+          return {
+            where(whereClause: { right: { value: unknown } }) {
+              const tableName = table[Symbol.for("drizzle:Name")] ?? "unknown";
+
+              return {
+                async returning() {
+                  if (tableName !== "tasks") {
+                    return [];
+                  }
+
+                  const taskId = String(whereClause.right.value);
+                  const existing = taskRows.find((row) => row.id === taskId);
+
+                  if (!existing) {
+                    return [];
+                  }
+
+                  Object.assign(existing, values);
+                  return [existing];
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+    select(selection: Record<string, unknown>) {
+      return {
+        from(table: any) {
+          const tableName = table[Symbol.for("drizzle:Name")] ?? "unknown";
+
+          if (tableName === "tasks") {
             return {
               where() {
                 return {
@@ -100,10 +138,36 @@ function createFakeDb() {
                 };
               },
             };
-          },
-        };
-      },
+          }
+
+          if (tableName === "task_events") {
+            return {
+              where() {
+                return {
+                  orderBy() {
+                    return {
+                      async limit() {
+                        void selection;
+                        return [...taskEventRows];
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          }
+
+          throw new Error(`Unsupported table in fake select: ${tableName}`);
+        },
+      };
     },
+  };
+
+  return {
+    draftRows,
+    taskRows,
+    taskEventRows,
+    db,
   };
 }
 
@@ -199,8 +263,12 @@ test("confirm creation persists a real task record and consumes the draft atomic
         assert.equal(created.requestId, "req_confirm_task");
         assert.equal(created.task.status, "created");
         assert.equal(fake.taskRows.length, 1);
+        assert.equal(fake.taskEventRows.length, 1);
         assert.equal(fake.taskRows[0]?.creatorUserId, 42);
         assert.equal(fake.taskRows[0]?.sourceIdentifier, "youtube:KurzgesagtCN");
+        assert.equal(fake.taskEventRows[0]?.eventType, "task.created");
+        assert.equal(fake.taskEventRows[0]?.toStatus, "created");
+        assert.equal(fake.taskEventRows[0]?.requestId, "req_confirm_task");
         assert.equal(fake.draftRows.size, 0);
 
         await assert.rejects(confirmTaskCreation(42, formData), (error: any) => {

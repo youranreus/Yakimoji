@@ -16,6 +16,7 @@ import { taskIntakeDrafts, tasks } from "../../../../database/schema";
 import { getRequestContext } from "../../auth/server/request-context.server";
 
 import { getDefaultProcessingBaseline } from "./task-baseline.server";
+import { recordTaskCreation } from "./task-events.server";
 import { createTaskActionError, type TaskActionError } from "./task-errors.server";
 import { recognizeSourceFromUpload, recognizeSourceFromYoutubeUrl } from "./source-recognition.server";
 import { initialTaskStatus, type TaskStatus } from "./task-status.server";
@@ -351,24 +352,34 @@ export async function confirmTaskCreation(
     previewLabel?: string;
   };
 
-  await db.insert(tasks).values({
-    id: taskId,
-    creatorUserId: userId,
-    intakeMethod: "youtube_link",
-    sourceUrl: draft.sourceUrl,
-    sourceIdentifier: draft.sourceIdentifier ?? "youtube:unknown",
-    sourceSnapshot: {
-      title: sourceSnapshot.title,
-      confidence: sourceSnapshot.confidence,
-      recognitionMode: sourceSnapshot.recognitionMode,
-      previewLabel: sourceSnapshot.previewLabel,
+  await db.transaction(async (tx) => {
+    await tx.insert(tasks).values({
+      id: taskId,
+      creatorUserId: userId,
+      intakeMethod: "youtube_link",
+      sourceUrl: draft.sourceUrl,
+      sourceIdentifier: draft.sourceIdentifier ?? "youtube:unknown",
+      sourceSnapshot: {
+        title: sourceSnapshot.title,
+        confidence: sourceSnapshot.confidence,
+        recognitionMode: sourceSnapshot.recognitionMode,
+        previewLabel: sourceSnapshot.previewLabel,
+        requestId,
+      },
+      processingBaselineSnapshot: baseline,
+      uploadStorageKey: draft.uploadStorageKey,
+      status: initialTaskStatus,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await recordTaskCreation({
+      taskId,
       requestId,
-    },
-    processingBaselineSnapshot: baseline,
-    uploadStorageKey: draft.uploadStorageKey,
-    status: initialTaskStatus,
-    createdAt: now,
-    updatedAt: now,
+      actorUserId: userId,
+      createdAt: now,
+      db: tx,
+    });
   });
 
   return {
