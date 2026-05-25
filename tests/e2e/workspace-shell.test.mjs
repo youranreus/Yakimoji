@@ -38,6 +38,10 @@ test("workspace shell copy exposes the visible dashboard affordances for the use
   assert.match(workspaceShell, /Protected Workspace/);
   assert.match(workspaceShell, /Global Navigation/);
   assert.match(workspaceShell, /Main Content/);
+  assert.match(workspaceShell, /任务导入/);
+  assert.match(workspaceShell, /YouTube Link/);
+  assert.match(workspaceShell, /Video Upload/);
+  assert.match(workspaceShell, /最近创建任务/);
   assert.match(workspaceShell, /request_id:/);
   assert.match(workspaceShell, /HttpOnly 的 Yakimoji session cookie/);
   assert.match(workspaceShell, /SSO 只负责身份认证/);

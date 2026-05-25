@@ -1,4 +1,4 @@
-import { Form, isRouteErrorResponse, useRouteError } from "react-router";
+import { Form, isRouteErrorResponse, useActionData, useRouteError } from "react-router";
 
 import type { Route } from "./+types/workspace";
 import { requireRole } from "~/features/auth/server/authz.server";
@@ -6,6 +6,10 @@ import {
   getCurrentUserRoles,
   requireUserSession,
 } from "~/features/auth/server/session.server";
+import {
+  handleTaskIntakeAction,
+  listRecentTasksForUser,
+} from "~/features/tasks/server/task-intake.server";
 import { WorkspaceShell } from "~/shared/ui/WorkspaceShell";
 
 export function meta({}: Route.MetaArgs) {
@@ -27,6 +31,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     id: "creator-home",
   });
 
+  const recentTasks = await listRecentTasksForUser(authenticated.user.id);
+
   return {
     requestId: context.requestId,
     runtime: context.releaseStage,
@@ -39,7 +45,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     roles,
     navigation: [
       { label: "工作台总览", href: "/workspace", state: "active" as const },
-      { label: "任务导入", href: "#", state: "coming-soon" as const },
+      { label: "任务导入", href: "/workspace", state: "active" as const },
       { label: "预设", href: "#", state: "coming-soon" as const },
       { label: "Review", href: "#", state: "coming-soon" as const },
       { label: "交付", href: "#", state: "coming-soon" as const },
@@ -58,10 +64,24 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         body: "关键错误和拒绝响应会带 request_id，便于支持与审计闭环。",
       },
     ],
+    recentTasks,
   };
 }
 
+export async function action({ request }: Route.ActionArgs) {
+  const authenticated = await requireUserSession(request);
+
+  await requireRole(authenticated, "creator", {
+    type: "workspace",
+    id: "creator-home",
+  });
+
+  return handleTaskIntakeAction(authenticated.user.id, request);
+}
+
 export default function WorkspaceRoute({ loaderData }: Route.ComponentProps) {
+  const actionData = useActionData<typeof action>();
+
   return (
     <WorkspaceShell
       runtime={loaderData.runtime}
@@ -71,6 +91,8 @@ export default function WorkspaceRoute({ loaderData }: Route.ComponentProps) {
       roles={loaderData.roles}
       navigation={loaderData.navigation}
       panels={loaderData.panels}
+      recentTasks={loaderData.recentTasks}
+      actionData={actionData ?? null}
       logoutForm={
         <Form method="post" action="/logout">
           <button className="secondary-action" type="submit">

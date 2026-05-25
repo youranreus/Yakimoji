@@ -40,6 +40,14 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
+.workspace-top-grid {
+  grid-template-columns: minmax(16rem, 0.9fr) minmax(0, 2fr);
+}
+
+.workspace-bottom-grid {
+  margin-top: 1.25rem;
+}
+
 .shell-panel {
   border: 1px solid var(--panel-border);
   border-radius: 1.5rem;
@@ -47,6 +55,11 @@ body {
   background: var(--panel);
   box-shadow: 0 20px 45px rgba(28, 25, 23, 0.08);
   backdrop-filter: blur(14px);
+}
+
+.shell-panel h2,
+.shell-panel h3 {
+  font-family: "Iowan Old Style", "Times New Roman", serif;
 }
 
 .shell-hero {
@@ -100,6 +113,209 @@ body {
 .panel-stack {
   display: grid;
   gap: 1rem;
+}
+
+.intake-panel {
+  background:
+    linear-gradient(135deg, rgba(255, 249, 240, 0.98), rgba(255, 252, 246, 0.92)),
+    var(--panel);
+}
+
+.intake-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.intake-panel-header h2,
+.recent-task-panel h2 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.intake-hint,
+.intake-copy,
+.field-hint {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.intake-grid,
+.preview-ledger {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.preview-ledger {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.intake-card,
+.ledger-card,
+.confirm-card,
+.recent-task-item,
+.inline-feedback {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(143, 78, 23, 0.12);
+  background: rgba(255, 252, 246, 0.9);
+}
+
+.intake-card,
+.ledger-card,
+.recent-task-item,
+.inline-feedback {
+  padding: 1.1rem 1.15rem;
+}
+
+.confirm-card {
+  margin-top: 1rem;
+  padding: 1.15rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.intake-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.field-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.text-input,
+.file-input {
+  width: 100%;
+  border: 1px solid rgba(41, 37, 36, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.95rem 1rem;
+  font: inherit;
+  color: var(--ink);
+}
+
+.text-input:focus,
+.file-input:focus,
+.primary-action:focus,
+.secondary-action:focus {
+  outline: 2px solid rgba(143, 78, 23, 0.4);
+  outline-offset: 2px;
+}
+
+.file-input {
+  min-height: 3.25rem;
+}
+
+.field-error {
+  margin: 0;
+  color: #a43222;
+  font-size: 0.9rem;
+}
+
+.inline-feedback {
+  margin-top: 1rem;
+}
+
+.inline-feedback-error {
+  border-color: rgba(164, 50, 34, 0.25);
+  background: rgba(255, 243, 240, 0.95);
+}
+
+.inline-feedback-info {
+  background: rgba(252, 248, 238, 0.96);
+}
+
+.inline-feedback-success {
+  border-color: rgba(56, 112, 76, 0.2);
+  background: rgba(241, 250, 244, 0.95);
+}
+
+.feedback-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.feedback-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.preview-stack {
+  margin-top: 1rem;
+}
+
+.ledger-list {
+  margin: 1rem 0 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.ledger-list div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.ledger-list dt {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.ledger-list dd {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.recent-task-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.recent-task-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.recent-task-heading h3 {
+  margin: 0;
+}
+
+.recent-task-item p {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(143, 78, 23, 0.12);
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .mini-panel {
@@ -217,11 +433,13 @@ body {
   margin-top: 1rem;
   background: var(--accent);
   color: #fff7ed;
+  min-height: 3rem;
 }
 
 .secondary-action {
   background: rgba(31, 41, 55, 0.08);
   color: var(--ink);
+  min-height: 3rem;
 }
 
 .auth-notes {
@@ -267,5 +485,17 @@ pre {
   .shell-nav-list li {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .workspace-top-grid,
+  .intake-grid,
+  .preview-ledger,
+  .confirm-card {
+    grid-template-columns: 1fr;
+  }
+
+  .intake-panel-header,
+  .recent-task-heading {
+    flex-direction: column;
   }
 }

@@ -1,0 +1,41 @@
+import {
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
+
+import { users } from "./auth";
+
+export const tasks = pgTable(
+  "tasks",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    creatorUserId: integer("creator_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    intakeMethod: varchar("intake_method", { length: 32 }).notNull(),
+    sourceUrl: text("source_url"),
+    sourceIdentifier: varchar("source_identifier", { length: 320 }).notNull(),
+    sourceSnapshot: jsonb("source_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    processingBaselineSnapshot: jsonb("processing_baseline_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    uploadStorageKey: text("upload_storage_key"),
+    status: varchar("status", { length: 32 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("tasks_creator_user_id_idx").on(table.creatorUserId),
+    index("tasks_status_idx").on(table.status),
+    index("tasks_source_identifier_idx").on(table.sourceIdentifier),
+  ],
+);

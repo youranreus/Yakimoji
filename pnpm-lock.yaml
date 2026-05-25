@@ -8,12 +8,18 @@ importers:
 
   .:
     dependencies:
+      '@hookform/resolvers':
+        specifier: ^5.4.0
+        version: 5.4.0(react-hook-form@7.76.1(react@19.2.6))
       '@react-router/express':
         specifier: 7.14.0
         version: 7.14.0(express@5.2.1)(react-router@7.14.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(typescript@5.9.3)
       '@react-router/node':
         specifier: 7.14.0
         version: 7.14.0(react-router@7.14.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(typescript@5.9.3)
+      '@remix-run/form-data-parser':
+        specifier: ^0.17.2
+        version: 0.17.2
       compression:
         specifier: ^1.8.0
         version: 1.8.1
@@ -38,9 +44,15 @@ importers:
       react-dom:
         specifier: ^19.2.4
         version: 19.2.6(react@19.2.6)
+      react-hook-form:
+        specifier: ^7.76.1
+        version: 7.76.1(react@19.2.6)
       react-router:
         specifier: 7.14.0
         version: 7.14.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@react-router/dev':
         specifier: 7.14.0
@@ -824,6 +836,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@hookform/resolvers@5.4.0':
+    resolution: {integrity: sha512-EIsqr/t/qbinPIhGjMdtvutIN1Kk4uwbROE9/UQ93CAVGR7GkA7Y92+fX80OzXi/OB67jVFYwKGO1WzkxmkFZw==}
+    peerDependencies:
+      react-hook-form: ^7.55.0
+
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
 
@@ -896,6 +913,15 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  '@remix-run/form-data-parser@0.17.2':
+    resolution: {integrity: sha512-6V9XffMkADkCHa/zLZQI2NVx1jDPiGtuiJ5cv9tmYzDn4KXjEJfqwHo6Fj8l95MThfoz5BTkkk2DOW2HEnuYkA==}
+
+  '@remix-run/headers@0.21.0':
+    resolution: {integrity: sha512-jlVE0GGxTaLqZ8cfB/sBDQYkKHXJxhWlLY836A7kjnHmy2oHET8J3/4+7+JgTqFBEBvK+ZiiqJKZElj+/zp5Cg==}
+
+  '@remix-run/multipart-parser@0.16.2':
+    resolution: {integrity: sha512-3B36kyAa/bKGzciNWFQM8MBQT291059Q6vjkqgmDPgENFfaejORIVKYpUHJGLHtTI62xrnLXxgL89kXE/nVzSQ==}
 
   '@remix-run/node-fetch-server@0.13.3':
     resolution: {integrity: sha512-UfjOXed/DQteaM5VyTfqTeGpHwyL2J5aoRGY6cydip4tt1ehNNeSwuXCC7AEGE0RWBs/7bgKxYkL/B/+UDe4AA==}
@@ -1132,6 +1158,9 @@ packages:
     resolution: {integrity: sha512-QVTUovf40zgTqlFVrKA1uXMVvU2QWEFWfAH8Wdc48IxLvrJMQVMBRjuQyUpzZCDkakImib9eVazbWlC6ksWtJw==}
     cpu: [x64]
     os: [win32]
+
+  '@standard-schema/utils@0.3.0':
+    resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
 
   '@tailwindcss/node@4.3.0':
     resolution: {integrity: sha512-aFb4gUhFOgdh9AXo4IzBEOzBkkAxm9VigwDJnMIYv3lcfXCJVesNfbEaBl4BNgVRyid92AmdviqwBUBRKSeY3g==}
@@ -1945,6 +1974,12 @@ packages:
     peerDependencies:
       react: ^19.2.6
 
+  react-hook-form@7.76.1:
+    resolution: {integrity: sha512-rYM7tPiWlu3nZchkR/ex7piyzui2vFPyaLnXnI/RnblB/L4qfMmyses8llJVtF1NpE9WBBsJlGtcSZzPCXW1qQ==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      react: ^16.8.0 || ^17 || ^18 || ^19
+
   react-refresh@0.14.2:
     resolution: {integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==}
     engines: {node: '>=0.10.0'}
@@ -2217,6 +2252,9 @@ packages:
 
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
+
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
 snapshots:
 
@@ -2725,6 +2763,11 @@ snapshots:
   '@esbuild/win32-x64@0.28.0':
     optional: true
 
+  '@hookform/resolvers@5.4.0(react-hook-form@7.76.1(react@19.2.6))':
+    dependencies:
+      '@standard-schema/utils': 0.3.0
+      react-hook-form: 7.76.1(react@19.2.6)
+
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
@@ -2818,6 +2861,16 @@ snapshots:
       react-router: 7.14.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
     optionalDependencies:
       typescript: 5.9.3
+
+  '@remix-run/form-data-parser@0.17.2':
+    dependencies:
+      '@remix-run/multipart-parser': 0.16.2
+
+  '@remix-run/headers@0.21.0': {}
+
+  '@remix-run/multipart-parser@0.16.2':
+    dependencies:
+      '@remix-run/headers': 0.21.0
 
   '@remix-run/node-fetch-server@0.13.3': {}
 
@@ -2946,6 +2999,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.60.4':
     optional: true
+
+  '@standard-schema/utils@0.3.0': {}
 
   '@tailwindcss/node@4.3.0':
     dependencies:
@@ -3695,6 +3750,10 @@ snapshots:
       react: 19.2.6
       scheduler: 0.27.0
 
+  react-hook-form@7.76.1(react@19.2.6):
+    dependencies:
+      react: 19.2.6
+
   react-refresh@0.14.2: {}
 
   react-router@7.14.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
@@ -3962,3 +4021,5 @@ snapshots:
   xtend@4.0.2: {}
 
   yallist@3.1.1: {}
+
+  zod@4.4.3: {}
