@@ -1,6 +1,6 @@
 # Story 1.3: Manual Task Intake with Source Recognition Preview
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -77,6 +77,16 @@ so that 我能在提交处理前确认系统识别到了正确的来源与关键
   - [x] 更新 `tests/e2e/workspace-shell.test.mjs`，把断言从“只有壳层”推进到“壳层 + 任务导入主行动区”，同时保留 Story 1.2 的安全边界文案意图
   - [x] 保持 `tests/auth-flow.test.ts`、`tests/session.test.ts`、`tests/api/health-route.test.mjs`、`tests/scaffold.test.mjs` 继续通过
   - [x] 至少运行 `pnpm typecheck`、`pnpm test`、`pnpm build`、`pnpm db:generate`、`pnpm db:migrate`
+
+### Review Findings
+
+- [x] [Review][Patch] Hostname 后缀校验会把 `notyoutube.com` 这类域名误判为 YouTube 链接 [app/features/tasks/server/source-recognition.server.ts:52]
+- [x] [Review][Patch] 上传路径直接用文件名构造“已识别来源”，违反“不能伪造成功来源”的 story 约束 [app/features/tasks/server/source-recognition.server.ts:75]
+- [x] [Review][Patch] 预览草稿只存在进程内 `Map`，重启后确认必然失效且没有过期清理策略 [app/features/tasks/server/task-intake.server.ts:86]
+- [x] [Review][Patch] 同一个 `draftToken` 并发确认时会重复落库，双击或重试可创建重复任务 [app/features/tasks/server/task-intake.server.ts:300]
+- [x] [Review][Patch] 上传文件先整体读入内存再写盘，且预览放弃或确认失败后不会清理孤儿文件 [app/features/tasks/server/upload-storage.server.ts:16]
+- [x] [Review][Patch] intake 错误通过 `throw data()` 进入路由错误边界，无法按 AC7 以内联方式留在工作台中展示 [app/features/tasks/server/task-errors.server.ts:43]
+- [x] [Review][Patch] 上传请求缺少 `multipart/form-data` 时会被误判成 YouTube 链接错误，而不是明确的上传失败 [app/features/tasks/server/task-intake.server.ts:353]
 
 ## Dev Notes
 

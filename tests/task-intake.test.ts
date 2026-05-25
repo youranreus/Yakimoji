@@ -4,7 +4,6 @@ import test from "node:test";
 import { FileUpload, MaxFileSizeExceededError } from "@remix-run/form-data-parser";
 
 import {
-  __resetTaskIntakeDraftsForTests,
   confirmTaskCreation,
   handleTaskIntakeAction,
   listRecentTasksForUser,
@@ -24,125 +23,166 @@ function makeUrlEncodedRequest(body: Record<string, string>, requestId = "req_ta
   });
 }
 
+function createFakeDb() {
+  const draftRows = new Map<string, Record<string, unknown>>();
+  const taskRows: Array<Record<string, unknown>> = [];
+
+  return {
+    draftRows,
+    taskRows,
+    db: {
+      insert(table: any) {
+        return {
+          async values(values: Record<string, unknown>) {
+            const tableName = table[Symbol.for("drizzle:Name")] ?? "unknown";
+
+            if (tableName === "task_intake_drafts") {
+              draftRows.set(String(values.token), { ...values });
+              return;
+            }
+
+            if (tableName === "tasks") {
+              taskRows.push({ ...values });
+            }
+          },
+        };
+      },
+      delete(table: any) {
+        const tableName = table[Symbol.for("drizzle:Name")] ?? "unknown";
+
+        return {
+          where() {
+            return {
+              async returning(selection: Record<string, unknown>) {
+                if (tableName === "task_intake_drafts") {
+                  if ("uploadStorageKey" in selection && Object.keys(selection).length === 1) {
+                    return [];
+                  }
+
+                  const [firstEntry] = draftRows.entries();
+
+                  if (!firstEntry) {
+                    return [];
+                  }
+
+                  draftRows.delete(firstEntry[0]);
+                  return [firstEntry[1]];
+                }
+
+                return [];
+              },
+            };
+          },
+        };
+      },
+      select(selection: Record<string, unknown>) {
+        return {
+          from() {
+            return {
+              where() {
+                return {
+                  orderBy() {
+                    return {
+                      async limit() {
+                        void selection;
+                        return taskRows.map((row) => ({
+                          id: row.id,
+                          status: row.status,
+                          intakeMethod: row.intakeMethod,
+                          sourceIdentifier: row.sourceIdentifier,
+                          sourceSnapshot: row.sourceSnapshot,
+                          processingBaselineSnapshot: row.processingBaselineSnapshot,
+                          createdAt: row.createdAt,
+                        }));
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    },
+  };
+}
+
 test.beforeEach(() => {
-  __resetTaskIntakeDraftsForTests();
   setTaskIntakeTestHooks({});
 });
 
 test("valid YouTube link creates a preview context with baseline summary inputs", async () => {
+  const fake = createFakeDb();
+
   await runWithRequestContext(
     createRequestContext({
       "x-request-id": "req_preview_youtube",
     }),
     async () => {
-      const response = await handleTaskIntakeAction(
-        7,
-        makeUrlEncodedRequest({
-          intent: "preview",
-          sourceUrl: "https://www.youtube.com/watch?v=abc123&ab_channel=KurzgesagtCN",
-        }, "req_preview_youtube"),
-      );
-
-      assert.equal(response.ok, true);
-      assert.equal(response.mode, "preview");
-      assert.equal(response.intakeMethod, "youtube_link");
-      assert.equal(response.requestId, "req_preview_youtube");
-      assert.equal(response.status, "resolving_source");
-      assert.equal(response.source.identifier, "youtube:KurzgesagtCN");
-      assert.match(response.baseline.translationMode, /中译中/);
-      assert.ok(response.draftToken.startsWith("draft_"));
-    },
-  );
-});
-
-test("invalid YouTube link returns a structured inline error with request_id", async () => {
-  await runWithRequestContext(
-    createRequestContext({
-      "x-request-id": "req_bad_link",
-    }),
-    async () => {
-      await assert.rejects(
-        handleTaskIntakeAction(
+      await DatabaseContext.run(fake.db as never, async () => {
+        const response = await handleTaskIntakeAction(
           7,
           makeUrlEncodedRequest({
-            intent: "preview",
-            sourceUrl: "https://vimeo.com/123",
-          }, "req_bad_link"),
-        ),
-        (error: any) => {
-          assert.equal(error.constructor?.name, "DataWithResponseInit");
-          assert.equal(error.data.code, "invalid_youtube_url");
-          assert.equal(error.data.field, "sourceUrl");
-          assert.equal(error.data.request_id, "req_bad_link");
-          return true;
-        },
-      );
+            intent: "preview_youtube",
+            sourceUrl: "https://www.youtube.com/watch?v=abc123&ab_channel=KurzgesagtCN",
+          }, "req_preview_youtube"),
+        );
+
+        assert.equal(response.ok, true);
+        assert.equal(response.mode, "preview");
+        assert.equal(response.intakeMethod, "youtube_link");
+        assert.equal(response.requestId, "req_preview_youtube");
+        assert.equal(response.status, "resolving_source");
+        assert.equal(response.source.identifier, "youtube:KurzgesagtCN");
+        assert.match(response.baseline.translationMode, /中译中/);
+        assert.ok(response.draftToken.startsWith("draft_"));
+        assert.equal(fake.draftRows.size, 1);
+      });
     },
   );
 });
 
-test("confirm creation persists a real task record with the shared initial status", async () => {
-  const inserts: Array<Record<string, unknown>> = [];
-  const selects: Array<Record<string, unknown>> = [];
+test("fake youtube-looking hosts are rejected", async () => {
+  const fake = createFakeDb();
 
-  const fakeDb = {
-    insert(table: any) {
-      return {
-        values(values: Record<string, unknown>) {
-          inserts.push({
-            table: table[Symbol.for("drizzle:Name")] ?? "unknown",
-            values,
-          });
-          return Promise.resolve();
-        },
-      };
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_fake_host",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        await assert.rejects(
+          handleTaskIntakeAction(
+            7,
+            makeUrlEncodedRequest({
+              intent: "preview_youtube",
+              sourceUrl: "https://notyoutube.com/watch?v=abc123",
+            }, "req_fake_host"),
+          ),
+          (error: any) => {
+            assert.equal(error.constructor?.name, "DataWithResponseInit");
+            assert.equal(error.data.code, "invalid_youtube_url");
+            return true;
+          },
+        );
+      });
     },
-    select(selection: Record<string, unknown>) {
-      return {
-        from() {
-          return {
-            where() {
-              return {
-                orderBy() {
-                  return {
-                    limit: async () => {
-                      selects.push(selection);
-                      return [
-                        {
-                          id: "task_recent_1",
-                          status: "created",
-                          intakeMethod: "youtube_link",
-                          sourceIdentifier: "youtube:KurzgesagtCN",
-                          sourceSnapshot: { title: "Kurzgesagt CN" },
-                          processingBaselineSnapshot: {
-                            translationMode: "中译中字幕",
-                            subtitleTemplate: "标准 Shorts 模板",
-                            outputPackage: "mp4 + srt",
-                          },
-                          createdAt: new Date("2026-05-25T08:00:00.000Z"),
-                        },
-                      ];
-                    },
-                  };
-                },
-              };
-            },
-          };
-        },
-      };
-    },
-  };
+  );
+});
+
+test("confirm creation persists a real task record and consumes the draft atomically", async () => {
+  const fake = createFakeDb();
 
   await runWithRequestContext(
     createRequestContext({
       "x-request-id": "req_confirm_task",
     }),
     async () => {
-      await DatabaseContext.run(fakeDb as never, async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
         const preview = await handleTaskIntakeAction(
           42,
           makeUrlEncodedRequest({
-            intent: "preview",
+            intent: "preview_youtube",
             sourceUrl: "https://www.youtube.com/watch?v=abc123&ab_channel=KurzgesagtCN",
           }, "req_confirm_task"),
         );
@@ -158,24 +198,28 @@ test("confirm creation persists a real task record with the shared initial statu
         assert.equal(created.mode, "created");
         assert.equal(created.requestId, "req_confirm_task");
         assert.equal(created.task.status, "created");
-        assert.equal(inserts.length, 1);
-        assert.equal(inserts[0]?.table, "tasks");
-        assert.equal(inserts[0]?.values.status, "created");
-        assert.equal(inserts[0]?.values.creatorUserId, 42);
-        assert.equal(inserts[0]?.values.sourceIdentifier, "youtube:KurzgesagtCN");
+        assert.equal(fake.taskRows.length, 1);
+        assert.equal(fake.taskRows[0]?.creatorUserId, 42);
+        assert.equal(fake.taskRows[0]?.sourceIdentifier, "youtube:KurzgesagtCN");
+        assert.equal(fake.draftRows.size, 0);
+
+        await assert.rejects(confirmTaskCreation(42, formData), (error: any) => {
+          assert.equal(error.constructor?.name, "DataWithResponseInit");
+          assert.equal(error.data.code, "confirmation_failed");
+          return true;
+        });
 
         const recent = await listRecentTasksForUser(42);
         assert.equal(recent.length, 1);
-        assert.equal(recent[0]?.id, "task_recent_1");
-        assert.match(recent[0]?.baselineSummary ?? "", /标准 Shorts 模板/);
+        assert.equal(recent[0]?.id, created.task.id);
       });
     },
   );
-
-  assert.equal(selects.length, 1);
 });
 
-test("upload parser failures preserve request_id in structured errors", async () => {
+test("upload parser failures preserve request_id in structured inline errors", async () => {
+  const fake = createFakeDb();
+
   setTaskIntakeTestHooks({
     parseFormDataImpl: async () => {
       throw new MaxFileSizeExceededError(10);
@@ -187,29 +231,30 @@ test("upload parser failures preserve request_id in structured errors", async ()
       "x-request-id": "req_upload_fail",
     }),
     async () => {
-      const request = new Request("http://localhost:3000/workspace", {
-        method: "POST",
-        headers: {
-          "content-type": "multipart/form-data; boundary=test",
-          "x-request-id": "req_upload_fail",
-        },
-      });
+      await DatabaseContext.run(fake.db as never, async () => {
+        const request = new Request("http://localhost:3000/workspace", {
+          method: "POST",
+          headers: {
+            "content-type": "multipart/form-data; boundary=test",
+            "x-request-id": "req_upload_fail",
+          },
+        });
 
-      await assert.rejects(
-        handleTaskIntakeAction(7, request),
-        (error: any) => {
+        await assert.rejects(handleTaskIntakeAction(7, request), (error: any) => {
           assert.equal(error.constructor?.name, "DataWithResponseInit");
           assert.equal(error.data.code, "invalid_upload");
           assert.equal(error.data.request_id, "req_upload_fail");
           return true;
-        },
-      );
+        });
+      });
     },
   );
 });
 
-test("upload preview validates media type and can produce a retryable recognition failure", async () => {
-  const mockFile = new File(["fake"], "notes.txt", { type: "text/plain" }) as FileUpload;
+test("upload preview returns a retryable inline error and cleans up temporary upload", async () => {
+  const fake = createFakeDb();
+  const deletedKeys: string[] = [];
+  const mockFile = new File(["fake"], "clip.mp4", { type: "" }) as FileUpload;
 
   Object.defineProperty(mockFile, "fieldName", {
     value: "videoFile",
@@ -218,6 +263,7 @@ test("upload preview validates media type and can produce a retryable recognitio
   setTaskIntakeTestHooks({
     parseFormDataImpl: async (_request, _options, uploadHandler) => {
       const formData = new FormData();
+      formData.set("intent", "preview_upload");
 
       if (uploadHandler) {
         const stored = await uploadHandler(mockFile);
@@ -229,29 +275,65 @@ test("upload preview validates media type and can produce a retryable recognitio
 
       return formData;
     },
+    persistUploadedVideoImpl: async () => ({
+      storageKey: "tasks/tmp-upload.mp4",
+      originalFileName: "clip.mp4",
+      contentType: "video/mp4",
+      size: 4,
+    }),
+    deleteStoredUploadImpl: async (storageKey) => {
+      deletedKeys.push(storageKey);
+    },
   });
 
   await runWithRequestContext(
     createRequestContext({
-      "x-request-id": "req_upload_type",
+      "x-request-id": "req_upload_retryable",
     }),
     async () => {
-      const request = new Request("http://localhost:3000/workspace", {
-        method: "POST",
-        headers: {
-          "content-type": "multipart/form-data; boundary=test",
-          "x-request-id": "req_upload_type",
-        },
-      });
+      await DatabaseContext.run(fake.db as never, async () => {
+        const request = new Request("http://localhost:3000/workspace", {
+          method: "POST",
+          headers: {
+            "content-type": "multipart/form-data; boundary=test",
+            "x-request-id": "req_upload_retryable",
+          },
+        });
 
-      await assert.rejects(
-        handleTaskIntakeAction(7, request),
-        (error: any) => {
-          assert.equal(error.data.code, "unsupported_media_type");
-          assert.equal(error.data.request_id, "req_upload_type");
-          return true;
-        },
-      );
+        const response = await handleTaskIntakeAction(7, request);
+
+        assert.equal(response.ok, false);
+        assert.equal(response.code, "source_recognition_failed");
+        assert.equal(response.retryable, true);
+        assert.equal(response.request_id, "req_upload_retryable");
+      });
+    },
+  );
+
+  assert.deepEqual(deletedKeys, ["tasks/tmp-upload.mp4"]);
+});
+
+test("upload requests without multipart encoding return an upload-specific inline error", async () => {
+  const fake = createFakeDb();
+
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_missing_multipart",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        const response = await handleTaskIntakeAction(
+          7,
+          makeUrlEncodedRequest({
+            intent: "preview_upload",
+          }, "req_missing_multipart"),
+        );
+
+        assert.equal(response.ok, false);
+        assert.equal(response.code, "invalid_upload");
+        assert.equal(response.field, "videoFile");
+        assert.equal(response.request_id, "req_missing_multipart");
+      });
     },
   );
 });

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 import {
   FormDataParseError,
@@ -8,17 +9,17 @@ import {
   parseFormData,
   type FileUpload,
 } from "@remix-run/form-data-parser";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 
 import { database } from "../../../../database/context";
-import { tasks } from "../../../../database/schema";
+import { taskIntakeDrafts, tasks } from "../../../../database/schema";
 import { getRequestContext } from "../../auth/server/request-context.server";
 
 import { getDefaultProcessingBaseline } from "./task-baseline.server";
-import { createTaskActionError } from "./task-errors.server";
+import { createTaskActionError, type TaskActionError } from "./task-errors.server";
 import { recognizeSourceFromUpload, recognizeSourceFromYoutubeUrl } from "./source-recognition.server";
 import { initialTaskStatus, type TaskStatus } from "./task-status.server";
-import { persistUploadedVideo } from "./upload-storage.server";
+import { deleteStoredUpload, persistUploadedVideo } from "./upload-storage.server";
 
 const supportedVideoTypes = new Set([
   "video/mp4",
@@ -27,29 +28,25 @@ const supportedVideoTypes = new Set([
   "video/webm",
 ]);
 
+const supportedVideoExtensions = new Set([".mp4", ".mov", ".mkv", ".webm"]);
 const maxUploadSize = 512 * 1024 * 1024;
+const draftTtlMs = 30 * 60 * 1000;
 
 export type TaskPreviewPayload = {
   ok: true;
   mode: "preview";
-  intakeMethod: "youtube_link" | "video_upload";
+  intakeMethod: "youtube_link";
   draftToken: string;
   requestId: string;
   status: TaskStatus;
   source: {
     identifier: string;
     title: string;
-    recognitionMode: "youtube_link" | "video_upload";
-    confidence: "high" | "unknown";
+    recognitionMode: "youtube_link";
+    confidence: "high";
     previewLabel: string;
   };
   baseline: ReturnType<typeof getDefaultProcessingBaseline>;
-  upload?: {
-    storageKey: string;
-    fileName: string;
-    contentType: string;
-    size: number;
-  };
 };
 
 export type TaskCreatedPayload = {
@@ -59,7 +56,7 @@ export type TaskCreatedPayload = {
   task: {
     id: string;
     status: TaskStatus;
-    intakeMethod: "youtube_link" | "video_upload";
+    intakeMethod: "youtube_link";
     sourceIdentifier: string;
     sourceTitle: string;
     baselineSummary: string;
@@ -67,27 +64,16 @@ export type TaskCreatedPayload = {
   };
 };
 
-type PreviewDraft =
-  | {
-      intakeMethod: "youtube_link";
-      sourceUrl: string;
-      uploadStorageKey: null;
-      uploadMeta: null;
-      source: TaskPreviewPayload["source"];
-    }
-  | {
-      intakeMethod: "video_upload";
-      sourceUrl: null;
-      uploadStorageKey: string;
-      uploadMeta: NonNullable<TaskPreviewPayload["upload"]>;
-      source: TaskPreviewPayload["source"];
-    };
-
-const previewDrafts = new Map<string, PreviewDraft>();
+export type TaskIntakeActionResult =
+  | TaskPreviewPayload
+  | TaskCreatedPayload
+  | TaskActionError;
 
 export const taskIntakeTestHooks = {
   parseFormDataImpl: parseFormData,
   persistUploadedVideoImpl: persistUploadedVideo,
+  deleteStoredUploadImpl: deleteStoredUpload,
+  nowImpl: () => new Date(),
 };
 
 export function setTaskIntakeTestHooks(
@@ -97,6 +83,9 @@ export function setTaskIntakeTestHooks(
     hooks.parseFormDataImpl ?? parseFormData;
   taskIntakeTestHooks.persistUploadedVideoImpl =
     hooks.persistUploadedVideoImpl ?? persistUploadedVideo;
+  taskIntakeTestHooks.deleteStoredUploadImpl =
+    hooks.deleteStoredUploadImpl ?? deleteStoredUpload;
+  taskIntakeTestHooks.nowImpl = hooks.nowImpl ?? (() => new Date());
 }
 
 function buildBaselineSummary(baseline: ReturnType<typeof getDefaultProcessingBaseline>) {
@@ -130,18 +119,41 @@ function assertDraftToken(value: FormDataEntryValue | null) {
 function assertIntent(formData: FormData) {
   const intent = formData.get("intent");
 
-  if (intent === "preview" || intent === "confirm") {
+  if (
+    intent === "preview_youtube" ||
+    intent === "preview_upload" ||
+    intent === "confirm"
+  ) {
     return intent;
   }
 
   throw createTaskActionError("invalid_intake", "当前任务导入动作无效。");
 }
 
+async function cleanupExpiredDrafts() {
+  const now = taskIntakeTestHooks.nowImpl();
+  const db = database();
+  const expiredDrafts = await db
+    .delete(taskIntakeDrafts)
+    .where(lt(taskIntakeDrafts.expiresAt, now))
+    .returning({
+      uploadStorageKey: taskIntakeDrafts.uploadStorageKey,
+    });
+
+  await Promise.all(
+    expiredDrafts
+      .map((draft) => draft.uploadStorageKey)
+      .filter((value): value is string => Boolean(value))
+      .map((storageKey) => taskIntakeTestHooks.deleteStoredUploadImpl(storageKey)),
+  );
+}
+
 async function parseVideoUpload(request: Request) {
   let uploadedFile: FileUpload | null = null;
+  let formData: FormData | null = null;
 
   try {
-    const formData = await taskIntakeTestHooks.parseFormDataImpl(
+    formData = await taskIntakeTestHooks.parseFormDataImpl(
       request,
       {
         maxFiles: 1,
@@ -188,7 +200,11 @@ function validateUploadedVideo(file: FileUpload | null) {
     });
   }
 
-  if (!supportedVideoTypes.has(file.type)) {
+  const extension = path.extname(file.name).toLowerCase();
+  const hasSupportedType = supportedVideoTypes.has(file.type);
+  const hasSupportedExtension = supportedVideoExtensions.has(extension);
+
+  if (!hasSupportedType && !hasSupportedExtension) {
     throw createTaskActionError("unsupported_media_type", "当前仅支持 mp4、mov、mkv 和 webm 视频。", {
       field: "videoFile",
     });
@@ -203,61 +219,12 @@ function validateUploadedVideo(file: FileUpload | null) {
   return file;
 }
 
-export async function previewTaskIntake(request: Request): Promise<TaskPreviewPayload> {
-  const contentType = request.headers.get("content-type") ?? "";
+async function createYoutubePreviewDraft(
+  userId: number,
+  sourceUrl: string,
+): Promise<TaskPreviewPayload> {
   const requestId = getRequestContext().requestId;
   const baseline = getDefaultProcessingBaseline();
-
-  if (contentType.includes("multipart/form-data")) {
-    const { uploadedFile } = await parseVideoUpload(request);
-    const file = validateUploadedVideo(uploadedFile);
-    const storedUpload = await taskIntakeTestHooks.persistUploadedVideoImpl(file);
-    const source = recognizeSourceFromUpload(file.name);
-
-    if (!source) {
-      throw createTaskActionError(
-        "source_recognition_failed",
-        "当前上传文件不足以识别来源，请更换文件或改用 YouTube 链接。",
-        { field: "videoFile", retryable: true },
-      );
-    }
-
-    const draftToken = `draft_${randomUUID().replace(/-/g, "")}`;
-
-    previewDrafts.set(draftToken, {
-      intakeMethod: "video_upload",
-      sourceUrl: null,
-      uploadStorageKey: storedUpload.storageKey,
-      uploadMeta: {
-        storageKey: storedUpload.storageKey,
-        fileName: storedUpload.originalFileName,
-        contentType: storedUpload.contentType,
-        size: storedUpload.size,
-      },
-      source,
-    });
-
-    return {
-      ok: true,
-      mode: "preview",
-      intakeMethod: "video_upload",
-      draftToken,
-      requestId,
-      status: "resolving_source",
-      source,
-      baseline,
-      upload: {
-        storageKey: storedUpload.storageKey,
-        fileName: storedUpload.originalFileName,
-        contentType: storedUpload.contentType,
-        size: storedUpload.size,
-      },
-    };
-  }
-
-  const formData = await request.formData();
-  const sourceUrl = assertYoutubeUrlInput(formData.get("sourceUrl"));
-
   let source;
 
   try {
@@ -271,12 +238,28 @@ export async function previewTaskIntake(request: Request): Promise<TaskPreviewPa
   }
 
   const draftToken = `draft_${randomUUID().replace(/-/g, "")}`;
-  previewDrafts.set(draftToken, {
+  const now = taskIntakeTestHooks.nowImpl();
+  const expiresAt = new Date(now.getTime() + draftTtlMs);
+  const db = database();
+
+  await db.insert(taskIntakeDrafts).values({
+    token: draftToken,
+    creatorUserId: userId,
     intakeMethod: "youtube_link",
     sourceUrl,
+    sourceIdentifier: source.identifier,
+    sourceSnapshot: {
+      title: source.title,
+      confidence: source.confidence,
+      recognitionMode: source.recognitionMode,
+      previewLabel: source.previewLabel,
+      requestId,
+    },
+    processingBaselineSnapshot: baseline,
     uploadStorageKey: null,
-    uploadMeta: null,
-    source,
+    uploadSnapshot: {},
+    expiresAt,
+    createdAt: now,
   });
 
   return {
@@ -291,15 +274,67 @@ export async function previewTaskIntake(request: Request): Promise<TaskPreviewPa
   };
 }
 
+async function previewUploadedVideo(request: Request): Promise<TaskActionError> {
+  const { formData, uploadedFile } = await parseVideoUpload(request);
+  const intent = assertIntent(formData);
+
+  if (intent !== "preview_upload") {
+    throw createTaskActionError("invalid_upload", "当前上传请求缺少有效的导入意图。", {
+      field: "videoFile",
+    });
+  }
+
+  const file = validateUploadedVideo(uploadedFile);
+  const storedUpload = await taskIntakeTestHooks.persistUploadedVideoImpl(file);
+
+  try {
+    const source = recognizeSourceFromUpload(file.name);
+
+    if (!source || source.identifier == null) {
+      return createTaskActionError(
+        "source_recognition_failed",
+        "当前上传文件仍无法可靠识别来源，请改用 YouTube 链接或稍后重试。",
+        { field: "videoFile", retryable: true },
+      ).data as TaskActionError;
+    }
+
+    return createTaskActionError(
+      "source_recognition_failed",
+      `${source.previewLabel}，请改用 YouTube 链接继续创建任务。`,
+      { field: "videoFile", retryable: true },
+    ).data as TaskActionError;
+  } finally {
+    await taskIntakeTestHooks.deleteStoredUploadImpl(storedUpload.storageKey);
+  }
+}
+
 export async function confirmTaskCreation(
   userId: number,
   formData: FormData,
 ): Promise<TaskCreatedPayload> {
   const requestId = getRequestContext().requestId;
   const draftToken = assertDraftToken(formData.get("draftToken"));
-  const draft = previewDrafts.get(draftToken);
+  const db = database();
+  const now = taskIntakeTestHooks.nowImpl();
+  const [draft] = await db
+    .delete(taskIntakeDrafts)
+    .where(
+      and(
+        eq(taskIntakeDrafts.token, draftToken),
+        eq(taskIntakeDrafts.creatorUserId, userId),
+      ),
+    )
+    .returning({
+      intakeMethod: taskIntakeDrafts.intakeMethod,
+      sourceUrl: taskIntakeDrafts.sourceUrl,
+      sourceIdentifier: taskIntakeDrafts.sourceIdentifier,
+      sourceSnapshot: taskIntakeDrafts.sourceSnapshot,
+      processingBaselineSnapshot: taskIntakeDrafts.processingBaselineSnapshot,
+      uploadStorageKey: taskIntakeDrafts.uploadStorageKey,
+      expiresAt: taskIntakeDrafts.expiresAt,
+    });
 
-  if (!draft) {
+  if (!draft || draft.expiresAt.getTime() <= now.getTime()) {
     throw createTaskActionError(
       "confirmation_failed",
       "识别预览已过期，请重新导入后再确认提交。",
@@ -307,22 +342,26 @@ export async function confirmTaskCreation(
     );
   }
 
-  const db = database();
   const taskId = `task_${randomUUID().replace(/-/g, "")}`;
-  const baseline = getDefaultProcessingBaseline();
-  const now = new Date();
+  const baseline = draft.processingBaselineSnapshot as ReturnType<typeof getDefaultProcessingBaseline>;
+  const sourceSnapshot = draft.sourceSnapshot as {
+    title?: string;
+    confidence?: string;
+    recognitionMode?: string;
+    previewLabel?: string;
+  };
 
   await db.insert(tasks).values({
     id: taskId,
     creatorUserId: userId,
-    intakeMethod: draft.intakeMethod,
+    intakeMethod: "youtube_link",
     sourceUrl: draft.sourceUrl,
-    sourceIdentifier: draft.source.identifier,
+    sourceIdentifier: draft.sourceIdentifier ?? "youtube:unknown",
     sourceSnapshot: {
-      title: draft.source.title,
-      confidence: draft.source.confidence,
-      recognitionMode: draft.source.recognitionMode,
-      previewLabel: draft.source.previewLabel,
+      title: sourceSnapshot.title,
+      confidence: sourceSnapshot.confidence,
+      recognitionMode: sourceSnapshot.recognitionMode,
+      previewLabel: sourceSnapshot.previewLabel,
       requestId,
     },
     processingBaselineSnapshot: baseline,
@@ -332,8 +371,6 @@ export async function confirmTaskCreation(
     updatedAt: now,
   });
 
-  previewDrafts.delete(draftToken);
-
   return {
     ok: true,
     mode: "created",
@@ -341,37 +378,41 @@ export async function confirmTaskCreation(
     task: {
       id: taskId,
       status: initialTaskStatus,
-      intakeMethod: draft.intakeMethod,
-      sourceIdentifier: draft.source.identifier,
-      sourceTitle: draft.source.title,
+      intakeMethod: "youtube_link",
+      sourceIdentifier: draft.sourceIdentifier ?? "youtube:unknown",
+      sourceTitle: sourceSnapshot.title ?? draft.sourceIdentifier ?? "未知来源",
       baselineSummary: buildBaselineSummary(baseline),
       createdAt: now.toISOString(),
     },
   };
 }
 
-export async function handleTaskIntakeAction(userId: number, request: Request) {
+export async function handleTaskIntakeAction(
+  userId: number,
+  request: Request,
+): Promise<TaskIntakeActionResult> {
+  await cleanupExpiredDrafts();
+
   const contentType = request.headers.get("content-type") ?? "";
 
   if (contentType.includes("multipart/form-data")) {
-    return previewTaskIntake(request);
+    return previewUploadedVideo(request);
   }
 
   const formData = await request.formData();
   const intent = assertIntent(formData);
 
-  if (intent === "preview") {
-    const previewRequest = new Request(request.url, {
-      method: request.method,
-      headers: request.headers,
-      body: new URLSearchParams(
-        Array.from(formData.entries()).flatMap(([key, value]) =>
-          typeof value === "string" ? [[key, value]] : [],
-        ),
-      ),
-    });
+  if (intent === "preview_upload") {
+    return createTaskActionError(
+      "invalid_upload",
+      "上传视频必须使用 multipart/form-data 表单编码，请重新选择文件后再试。",
+      { field: "videoFile", retryable: true },
+    ).data as TaskActionError;
+  }
 
-    return previewTaskIntake(previewRequest);
+  if (intent === "preview_youtube") {
+    const sourceUrl = assertYoutubeUrlInput(formData.get("sourceUrl"));
+    return createYoutubePreviewDraft(userId, sourceUrl);
   }
 
   return confirmTaskCreation(userId, formData);
@@ -408,8 +449,4 @@ export async function listRecentTasksForUser(userId: number) {
       createdAt: record.createdAt.toISOString(),
     };
   });
-}
-
-export function __resetTaskIntakeDraftsForTests() {
-  previewDrafts.clear();
 }

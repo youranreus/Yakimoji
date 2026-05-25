@@ -7,27 +7,21 @@ import { z } from "zod";
 type TaskPreviewPayload = {
   ok: true;
   mode: "preview";
-  intakeMethod: "youtube_link" | "video_upload";
+  intakeMethod: "youtube_link";
   draftToken: string;
   requestId: string;
   status: string;
   source: {
     identifier: string;
     title: string;
-    recognitionMode: "youtube_link" | "video_upload";
-    confidence: "high" | "unknown";
+    recognitionMode: "youtube_link";
+    confidence: "high";
     previewLabel: string;
   };
   baseline: {
     translationMode: string;
     subtitleTemplate: string;
     outputPackage: string;
-  };
-  upload?: {
-    storageKey: string;
-    fileName: string;
-    contentType: string;
-    size: number;
   };
 };
 
@@ -129,23 +123,25 @@ export function WorkspaceShell({
     },
   });
 
-  const preview =
-    confirmFetcher.data && confirmFetcher.data.ok === false
-      ? null
-      : youtubeFetcher.data && youtubeFetcher.data.ok
-        ? youtubeFetcher.data
-        : uploadFetcher.data && uploadFetcher.data.ok
-          ? uploadFetcher.data
-          : actionData && actionData.ok && actionData.mode === "preview"
-            ? actionData
-            : null;
-
   const created =
     confirmFetcher.data && confirmFetcher.data.ok
       ? confirmFetcher.data
       : actionData && actionData.ok && actionData.mode === "created"
         ? actionData
         : null;
+
+  const preview =
+    created
+      ? null
+      : confirmFetcher.data && confirmFetcher.data.ok === false
+        ? null
+        : youtubeFetcher.data && youtubeFetcher.data.ok
+          ? youtubeFetcher.data
+          : uploadFetcher.data && uploadFetcher.data.ok
+            ? uploadFetcher.data
+            : actionData && actionData.ok && actionData.mode === "preview"
+              ? actionData
+              : null;
 
   const errors = [
     youtubeFetcher.data && youtubeFetcher.data.ok === false ? youtubeFetcher.data : null,
@@ -219,7 +215,7 @@ export function WorkspaceShell({
                 className="intake-form"
                 onSubmit={form.handleSubmit(() => undefined)}
               >
-                <input type="hidden" name="intent" value="preview" />
+                <input type="hidden" name="intent" value="preview_youtube" />
                 <label className="field-label" htmlFor={inputId}>
                   YouTube 链接
                 </label>
@@ -252,6 +248,7 @@ export function WorkspaceShell({
                 encType="multipart/form-data"
                 className="intake-form"
               >
+                <input type="hidden" name="intent" value="preview_upload" />
                 <label className="field-label" htmlFor={uploadId}>
                   视频文件
                 </label>
@@ -305,11 +302,11 @@ export function WorkspaceShell({
                     </div>
                     <div>
                       <dt>识别方式</dt>
-                      <dd>{preview.intakeMethod === "youtube_link" ? "YouTube 链接" : "视频上传"}</dd>
+                      <dd>YouTube 链接</dd>
                     </div>
                     <div>
                       <dt>置信度</dt>
-                      <dd>{preview.source.confidence === "high" ? "高" : "待确认"}</dd>
+                      <dd>高</dd>
                     </div>
                   </dl>
                 </section>
@@ -333,26 +330,6 @@ export function WorkspaceShell({
                   </dl>
                 </section>
 
-                {preview.upload ? (
-                  <section className="ledger-card">
-                    <p className="eyebrow">Upload Reference</p>
-                    <h3>{preview.upload.fileName}</h3>
-                    <dl className="ledger-list">
-                      <div>
-                        <dt>对象存储键</dt>
-                        <dd>{preview.upload.storageKey}</dd>
-                      </div>
-                      <div>
-                        <dt>类型</dt>
-                        <dd>{preview.upload.contentType}</dd>
-                      </div>
-                      <div>
-                        <dt>大小</dt>
-                        <dd>{formatSize(preview.upload.size)}</dd>
-                      </div>
-                    </dl>
-                  </section>
-                ) : null}
               </div>
 
               <confirmFetcher.Form method="post" className="confirm-card">

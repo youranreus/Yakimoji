@@ -8,6 +8,7 @@ import {
 } from "~/features/auth/server/session.server";
 import {
   handleTaskIntakeAction,
+  type TaskIntakeActionResult,
   listRecentTasksForUser,
 } from "~/features/tasks/server/task-intake.server";
 import { WorkspaceShell } from "~/shared/ui/WorkspaceShell";
@@ -80,7 +81,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function WorkspaceRoute({ loaderData }: Route.ComponentProps) {
-  const actionData = useActionData<typeof action>();
+  const actionData = useActionData<TaskIntakeActionResult>();
 
   return (
     <WorkspaceShell

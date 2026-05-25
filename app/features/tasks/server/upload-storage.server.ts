@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-
 import type { FileUpload } from "@remix-run/form-data-parser";
 
 const uploadsRoot = path.join(process.cwd(), ".local-share", "uploads");
@@ -19,7 +18,29 @@ export async function persistUploadedVideo(file: FileUpload): Promise<StoredUplo
   const absolutePath = path.join(uploadsRoot, storageKey);
 
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-  await fs.writeFile(absolutePath, Buffer.from(await file.arrayBuffer()));
+  const handle = await fs.open(absolutePath, "w");
+
+  try {
+    const reader = file.stream().getReader();
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      if (value) {
+        await handle.write(Buffer.from(value));
+      }
+    }
+  } catch (error) {
+    await handle.close();
+    await fs.rm(absolutePath, { force: true });
+    throw error;
+  }
+
+  await handle.close();
 
   return {
     storageKey,
@@ -27,4 +48,9 @@ export async function persistUploadedVideo(file: FileUpload): Promise<StoredUplo
     contentType: file.type || "application/octet-stream",
     size: file.size,
   };
+}
+
+export async function deleteStoredUpload(storageKey: string) {
+  const absolutePath = path.join(uploadsRoot, storageKey);
+  await fs.rm(absolutePath, { force: true });
 }
