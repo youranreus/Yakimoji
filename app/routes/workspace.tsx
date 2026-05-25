@@ -98,7 +98,13 @@ export function ErrorBoundary() {
       <main className="app-shell auth-shell">
         <section className="shell-panel auth-card">
           <p className="eyebrow">访问受限</p>
-          <h1>{error.status === 403 ? "当前账号没有访问权限" : "请求失败"}</h1>
+          <h1>
+            {error.status === 403
+              ? "当前账号没有访问权限"
+              : error.status >= 500
+                ? "认证服务暂时不可用"
+                : "请求失败"}
+          </h1>
           <p className="lede">
             {typeof error.data === "object" && error.data && "message" in error.data
               ? String(error.data.message)

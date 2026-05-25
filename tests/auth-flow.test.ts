@@ -141,15 +141,54 @@ test("SSO callback establishes only Yakimoji session state and redirects into /w
         assert.equal(error.status, 302);
         assert.equal(error.headers.get("Location"), "/workspace");
 
-        const setCookie = error.headers.get("Set-Cookie");
-        assert.ok(setCookie);
-        assert.match(setCookie, /__Host-yakimoji_session=/);
-        assert.doesNotMatch(setCookie, /upstream-token/);
+        const setCookies = error.headers.getSetCookie();
+        assert.equal(setCookies.length, 2);
+        assert.match(setCookies[0] ?? "", /__Host-yakimoji_session=/);
+        assert.match(setCookies[1] ?? "", /__Host-yakimoji_sso=;/);
+        assert.doesNotMatch(setCookies.join("\n"), /upstream-token/);
         assert.equal(error.headers.get("X-Request-Id")?.startsWith("req_"), true);
       }
     });
   } finally {
     globalThis.fetch = originalFetch;
+    setAuthFlowTestHooks({});
+  }
+});
+
+test("SSO callback failures return structured responses with request_id", async () => {
+  const request = new Request("http://localhost:3000/auth/callback?code=oauth-code&state=bad-state", {
+    headers: {
+      Cookie: "__Host-yakimoji_sso=mocked-cookie",
+      "x-request-id": "req_auth_failure",
+    },
+  });
+
+  setAuthFlowTestHooks({
+    readSsoStateCookieImpl: async () => ({
+      state: "different-state",
+      verifier: "verifier-token",
+    }),
+  });
+
+  try {
+    await runWithRequestContext(
+      createRequestContext({
+        "x-request-id": "req_auth_failure",
+      }),
+      async () => {
+        try {
+          await handleSsoCallback(request);
+          assert.fail("expected callback failure");
+        } catch (error) {
+          assert.equal(error?.constructor?.name, "DataWithResponseInit");
+          assert.equal(error.init.status, 401);
+          assert.equal(error.data.request_id, "req_auth_failure");
+          assert.match(error.data.message, /state/i);
+          assert.equal(error.init.headers["X-Request-Id"], "req_auth_failure");
+        }
+      },
+    );
+  } finally {
     setAuthFlowTestHooks({});
   }
 });

@@ -67,6 +67,7 @@ postgres://postgres:postgres@localhost:5432/yakimoji
 | `SSO_CLIENT_SECRET` | SSO client secret | 是 |
 | `SSO_CALLBACK_URL` | Yakimoji SSO 回调地址，默认 `http://localhost:3000/auth/callback` | 是 |
 | `SSO_PROVIDER_NAME` | 本地 SSO provider 标识，默认 `yakimoji-sso` | 否 |
+| `AUTH_BOOTSTRAP_ROLE` | 仅限受控引导环境使用。设为 `creator` 时，首次 SSO 登录用户才会被自动授予创作者角色；默认留空表示必须先在本地完成授权分配 | 否 |
 | `PORT` | HTTP 端口，默认 `3000` | 否 |
 
 ## Verification

@@ -1,4 +1,4 @@
-import { redirect } from "react-router";
+import { data, redirect } from "react-router";
 
 import { getRequestContext } from "./request-context.server";
 import {
@@ -27,6 +27,29 @@ export function setAuthFlowTestHooks(
   Object.assign(authFlowTestHooks, hooks);
 }
 
+function authenticationFailure(
+  message: string,
+  status = 401,
+  detail?: Record<string, unknown>,
+) {
+  const requestId = getRequestContext().requestId;
+
+  throw data(
+    {
+      code: "authentication_failed",
+      message,
+      request_id: requestId,
+      detail: detail ?? null,
+    },
+    {
+      status,
+      headers: {
+        "X-Request-Id": requestId,
+      },
+    },
+  );
+}
+
 function getSsoEnvironment() {
   const environment = getAuthEnvironment();
 
@@ -53,34 +76,57 @@ export async function beginSsoLogin() {
 }
 
 export async function handleSsoCallback(request: Request) {
-  const url = new URL(request.url);
-  const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
+  try {
+    const url = new URL(request.url);
+    const codeParam = url.searchParams.get("code");
+    const stateParam = url.searchParams.get("state");
 
-  if (!code || !state) {
-    throw new Error("SSO callback missing code or state");
-  }
+    if (!codeParam || !stateParam) {
+      authenticationFailure("SSO 回调缺少 code 或 state。");
+    }
 
-  decodeSsoState(state);
-  const stateCookie = await authFlowTestHooks.readSsoStateCookieImpl(request);
+    const code = codeParam!;
+    const state = stateParam!;
 
-  if (!stateCookie || stateCookie.state !== state) {
-    throw new Error("SSO state mismatch");
-  }
+    try {
+      decodeSsoState(state);
+    } catch {
+      authenticationFailure("SSO state 无法解析。");
+    }
 
-  const token = await exchangeAuthorizationCode(
-    getSsoEnvironment(),
-    code,
-    stateCookie.verifier,
-  );
-  const ssoUser = await fetchSsoUser(getSsoEnvironment(), token.accessToken);
-  const loginResult = await authFlowTestHooks.completeLoginFromSsoImpl(ssoUser);
-  const clearCookieHeader = await authFlowTestHooks.clearSsoStateCookieImpl();
+    const stateCookie = await authFlowTestHooks.readSsoStateCookieImpl(request);
 
-  throw redirect("/workspace", {
-    headers: {
-      "Set-Cookie": `${loginResult.setCookieHeader}, ${clearCookieHeader}`,
+    if (!stateCookie || stateCookie.state !== state) {
+      authenticationFailure("SSO state 校验失败。");
+    }
+
+    const verifiedStateCookie = stateCookie!;
+
+    const token = await exchangeAuthorizationCode(
+      getSsoEnvironment(),
+      code,
+      verifiedStateCookie.verifier,
+    );
+    const ssoUser = await fetchSsoUser(getSsoEnvironment(), token.accessToken);
+    const loginResult = await authFlowTestHooks.completeLoginFromSsoImpl(ssoUser);
+    const clearCookieHeader = await authFlowTestHooks.clearSsoStateCookieImpl();
+    const headers = new Headers({
       "X-Request-Id": getRequestContext().requestId,
-    },
-  });
+    });
+
+    headers.append("Set-Cookie", loginResult.setCookieHeader);
+    headers.append("Set-Cookie", clearCookieHeader);
+
+    throw redirect("/workspace", {
+      headers,
+    });
+  } catch (error) {
+    if (error instanceof Response || error?.constructor?.name === "DataWithResponseInit") {
+      throw error;
+    }
+
+    authenticationFailure("SSO 登录流程失败。", 502, {
+      cause: error instanceof Error ? error.message : "unknown",
+    });
+  }
 }

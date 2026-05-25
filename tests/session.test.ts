@@ -7,7 +7,10 @@ import {
   logoutCurrentSession,
   readSsoStateCookie,
   setSessionTestHooks,
+  upsertLocalUserFromSso,
 } from "../app/features/auth/server/session.server";
+import { createRequestContext, runWithRequestContext } from "../app/features/auth/server/request-context.server";
+import { DatabaseContext } from "../database/context";
 
 const originalEnv = { ...process.env };
 
@@ -109,4 +112,79 @@ test("logout invalidates the current session and clears the cookie", async () =>
   } finally {
     setSessionTestHooks({});
   }
+});
+
+test("session cookie creation does not require SSO client environment variables", async () => {
+  delete process.env.SSO_BASE_URL;
+  delete process.env.SSO_CLIENT_ID;
+  delete process.env.SSO_CLIENT_SECRET;
+  delete process.env.SSO_CALLBACK_URL;
+
+  try {
+    const setCookie = await commitSession("sess_public_route");
+    assert.match(setCookie, /__Host-yakimoji_session=/);
+  } finally {
+    installAuthEnv();
+  }
+});
+
+test("new SSO users are not auto-granted creator access unless bootstrap is explicitly enabled", async () => {
+  delete process.env.AUTH_BOOTSTRAP_ROLE;
+
+  const inserts: Array<{ table: string; values: unknown }> = [];
+  const tableNameSymbol = Symbol.for("drizzle:Name");
+  const fakeDb = {
+    select() {
+      return {
+        from() {
+          return {
+            innerJoin() {
+              return {
+                where() {
+                  return {
+                    limit: async () => [],
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+    insert(table: Record<PropertyKey, unknown>) {
+      return {
+        values(values: unknown) {
+          inserts.push({
+            table: typeof table[tableNameSymbol] === "string" ? String(table[tableNameSymbol]) : "unknown",
+            values,
+          });
+          return {
+            returning: async () => [{ id: 101 }],
+          };
+        },
+      };
+    },
+  };
+
+  try {
+    await runWithRequestContext(createRequestContext({}), async () => {
+      await DatabaseContext.run(fakeDb as never, async () => {
+        await assert.rejects(
+          upsertLocalUserFromSso({
+            providerUserId: "sso-user-1",
+            email: "creator@example.com",
+            displayName: "Creator",
+            providerRole: "1",
+          }),
+          (error: unknown) =>
+            error?.constructor?.name === "DataWithResponseInit" &&
+            (error as { init?: { status?: number } }).init?.status === 403,
+        );
+      });
+    });
+  } finally {
+    installAuthEnv();
+  }
+
+  assert.equal(inserts.some((entry) => entry.table === "user_role_assignments"), false);
 });

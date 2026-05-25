@@ -4,12 +4,15 @@ type RuntimeEnvironment = {
 };
 
 export type AuthEnvironment = {
-  sessionSecret: string;
   ssoBaseUrl: string;
   ssoClientId: string;
   ssoClientSecret: string;
   ssoCallbackUrl: string;
   ssoProviderName: string;
+};
+
+export type SessionEnvironment = {
+  sessionSecret: string;
   cookieSecure: boolean;
 };
 
@@ -35,15 +38,20 @@ export function getDatabaseUrl() {
 }
 
 export function getAuthEnvironment(): AuthEnvironment {
-  const nodeEnv = process.env.NODE_ENV || "development";
-
   return {
-    sessionSecret: getRequiredEnv("SESSION_SECRET"),
     ssoBaseUrl: getRequiredEnv("SSO_BASE_URL"),
     ssoClientId: getRequiredEnv("SSO_CLIENT_ID"),
     ssoClientSecret: getRequiredEnv("SSO_CLIENT_SECRET"),
     ssoCallbackUrl: getRequiredEnv("SSO_CALLBACK_URL"),
     ssoProviderName: process.env.SSO_PROVIDER_NAME || "yakimoji-sso",
+  };
+}
+
+export function getSessionEnvironment(): SessionEnvironment {
+  const nodeEnv = process.env.NODE_ENV || "development";
+
+  return {
+    sessionSecret: getRequiredEnv("SESSION_SECRET"),
     cookieSecure: nodeEnv === "production",
   };
 }

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { and, eq, gt, isNull } from "drizzle-orm";
-import { createCookie, redirect } from "react-router";
+import { createCookie, data, redirect } from "react-router";
 
 import {
   sessions,
@@ -11,7 +11,10 @@ import {
   type AllowedRole,
 } from "../../../../database/schema";
 import { database } from "../../../../database/context";
-import { getAuthEnvironment } from "../../../server/env.server";
+import {
+  getAuthEnvironment,
+  getSessionEnvironment,
+} from "../../../server/env.server";
 import { getRequestContext } from "./request-context.server";
 import { writeAuditLog } from "./audit.server";
 import type { SsoUser } from "./sso-adapter.server";
@@ -50,7 +53,7 @@ export function setSessionTestHooks(
 }
 
 function secureCookie() {
-  return getAuthEnvironment().cookieSecure;
+  return getSessionEnvironment().cookieSecure;
 }
 
 function getSessionCookie() {
@@ -59,7 +62,7 @@ function getSessionCookie() {
     secure: secureCookie(),
     sameSite: "lax",
     path: "/",
-    secrets: [getAuthEnvironment().sessionSecret],
+    secrets: [getSessionEnvironment().sessionSecret],
   });
 }
 
@@ -69,7 +72,7 @@ function getSsoStateCookie() {
     secure: secureCookie(),
     sameSite: "lax",
     path: "/",
-    secrets: [getAuthEnvironment().sessionSecret],
+    secrets: [getSessionEnvironment().sessionSecret],
     maxAge: 60 * 10,
   });
 }
@@ -198,6 +201,7 @@ export async function requireUserSession(request: Request) {
 
 export async function upsertLocalUserFromSso(ssoUser: SsoUser) {
   const db = database();
+  const authEnvironment = getAuthEnvironment();
   const [accountRecord] = await db
     .select({
       user: users,
@@ -207,7 +211,7 @@ export async function upsertLocalUserFromSso(ssoUser: SsoUser) {
     .innerJoin(users, eq(ssoAccounts.userId, users.id))
     .where(
       and(
-        eq(ssoAccounts.provider, getAuthEnvironment().ssoProviderName),
+        eq(ssoAccounts.provider, authEnvironment.ssoProviderName),
         eq(ssoAccounts.providerUserId, ssoUser.providerUserId),
       ),
     )
@@ -245,19 +249,55 @@ export async function upsertLocalUserFromSso(ssoUser: SsoUser) {
 
   await db.insert(ssoAccounts).values({
     userId: insertedUser.id,
-    provider: getAuthEnvironment().ssoProviderName,
+    provider: authEnvironment.ssoProviderName,
     providerUserId: ssoUser.providerUserId,
     providerRole: ssoUser.providerRole ?? null,
     profile: ssoUser.profile ?? {},
   });
 
-  await db.insert(userRoleAssignments).values({
-    userId: insertedUser.id,
-    role: "creator",
-    scopeType: "global",
-    scopeId: "yakimoji",
-    assignedBy: "sso-bootstrap",
-  });
+  const bootstrapRole = process.env.AUTH_BOOTSTRAP_ROLE;
+
+  if (bootstrapRole === "creator") {
+    await db.insert(userRoleAssignments).values({
+      userId: insertedUser.id,
+      role: "creator",
+      scopeType: "global",
+      scopeId: "yakimoji",
+      assignedBy: "sso-bootstrap",
+    });
+  }
+
+  if (bootstrapRole !== "creator") {
+    const { requestId } = getRequestContext();
+
+    await writeAuditLog({
+      actorUserId: insertedUser.id,
+      eventType: "authorization.bootstrap_denied",
+      resourceType: "workspace",
+      resourceId: "creator-home",
+      outcome: "forbidden",
+      detail: {
+        provider: authEnvironment.ssoProviderName,
+        providerUserId: ssoUser.providerUserId,
+        providerRole: ssoUser.providerRole ?? null,
+        bootstrapRole: bootstrapRole ?? null,
+      },
+    });
+
+    throw data(
+      {
+        code: "creator_role_required",
+        message: "当前账号尚未被授予 Yakimoji 创作者工作台访问权限。",
+        request_id: requestId,
+      },
+      {
+        status: 403,
+        headers: {
+          "X-Request-Id": requestId,
+        },
+      },
+    );
+  }
 
   await writeAuditLog({
     actorUserId: insertedUser.id,
@@ -266,9 +306,10 @@ export async function upsertLocalUserFromSso(ssoUser: SsoUser) {
     resourceId: String(insertedUser.id),
     outcome: "created",
     detail: {
-      provider: getAuthEnvironment().ssoProviderName,
+      provider: authEnvironment.ssoProviderName,
       providerUserId: ssoUser.providerUserId,
       providerRole: ssoUser.providerRole ?? null,
+      bootstrapRole: bootstrapRole ?? null,
     },
   });
 
@@ -276,6 +317,7 @@ export async function upsertLocalUserFromSso(ssoUser: SsoUser) {
 }
 
 export async function completeLoginFromSso(ssoUser: SsoUser) {
+  const authEnvironment = getAuthEnvironment();
   const userId = await upsertLocalUserFromSso(ssoUser);
   const sessionId = await createAuthenticatedSession(userId);
 
@@ -287,7 +329,7 @@ export async function completeLoginFromSso(ssoUser: SsoUser) {
     resourceId: sessionId,
     outcome: "success",
     detail: {
-      provider: getAuthEnvironment().ssoProviderName,
+      provider: authEnvironment.ssoProviderName,
       providerUserId: ssoUser.providerUserId,
     },
   });

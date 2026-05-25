@@ -10,6 +10,7 @@ const healthModulePromise = loadTransformedModule("app/routes/health.tsx", [
 const envModulePromise = loadTransformedModule("app/server/env.server.ts", [
   [/type RuntimeEnvironment = {[\s\S]*?};\n\n/, ""],
   [/export type AuthEnvironment = {[\s\S]*?};\n\n/, ""],
+  [/export type SessionEnvironment = {[\s\S]*?};\n\n/, ""],
   [/function getRequiredEnv\(name: string\)/, "function getRequiredEnv(name)"],
   [
     /export function getRuntimeEnvironment\(\): RuntimeEnvironment/,
@@ -17,6 +18,7 @@ const envModulePromise = loadTransformedModule("app/server/env.server.ts", [
   ],
   [/export function getDatabaseUrl\(\)/, "export function getDatabaseUrl()"],
   [/export function getAuthEnvironment\(\): AuthEnvironment/, "export function getAuthEnvironment()"],
+  [/export function getSessionEnvironment\(\): SessionEnvironment/, "export function getSessionEnvironment()"],
 ]);
 
 test("health API returns the starter baseline contract when the database URL is configured", async () => {
@@ -125,5 +127,42 @@ test("server runtime environment loader defaults NODE_ENV to development", async
     } else {
       process.env.NODE_ENV = originalNodeEnv;
     }
+  }
+});
+
+test("session environment loads without requiring SSO client settings", async () => {
+  const envModule = await envModulePromise;
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalSessionSecret = process.env.SESSION_SECRET;
+  const originalSsoBaseUrl = process.env.SSO_BASE_URL;
+  const originalSsoClientId = process.env.SSO_CLIENT_ID;
+  const originalSsoClientSecret = process.env.SSO_CLIENT_SECRET;
+  const originalSsoCallbackUrl = process.env.SSO_CALLBACK_URL;
+
+  process.env.NODE_ENV = "development";
+  process.env.SESSION_SECRET = "session-only-secret";
+  delete process.env.SSO_BASE_URL;
+  delete process.env.SSO_CLIENT_ID;
+  delete process.env.SSO_CLIENT_SECRET;
+  delete process.env.SSO_CALLBACK_URL;
+
+  try {
+    assert.deepEqual(envModule.getSessionEnvironment(), {
+      sessionSecret: "session-only-secret",
+      cookieSecure: false,
+    });
+  } finally {
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+    if (originalSessionSecret === undefined) delete process.env.SESSION_SECRET;
+    else process.env.SESSION_SECRET = originalSessionSecret;
+    if (originalSsoBaseUrl === undefined) delete process.env.SSO_BASE_URL;
+    else process.env.SSO_BASE_URL = originalSsoBaseUrl;
+    if (originalSsoClientId === undefined) delete process.env.SSO_CLIENT_ID;
+    else process.env.SSO_CLIENT_ID = originalSsoClientId;
+    if (originalSsoClientSecret === undefined) delete process.env.SSO_CLIENT_SECRET;
+    else process.env.SSO_CLIENT_SECRET = originalSsoClientSecret;
+    if (originalSsoCallbackUrl === undefined) delete process.env.SSO_CALLBACK_URL;
+    else process.env.SSO_CALLBACK_URL = originalSsoCallbackUrl;
   }
 });

@@ -45,13 +45,26 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = "Yakimoji workspace error";
   let details = "An unexpected error occurred while loading the workspace shell.";
   let stack: string | undefined;
+  let requestId: string | undefined;
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "404" : "Request error";
     details =
       error.status === 404
         ? "The requested route does not exist."
-        : error.statusText || details;
+        : (typeof error.data === "object" &&
+            error.data &&
+            "message" in error.data &&
+            typeof error.data.message === "string"
+            ? error.data.message
+            : error.statusText || details);
+    requestId =
+      typeof error.data === "object" &&
+      error.data &&
+      "request_id" in error.data &&
+      typeof error.data.request_id === "string"
+        ? error.data.request_id
+        : undefined;
   } else if (import.meta.env.DEV && error instanceof Error) {
     details = error.message;
     stack = error.stack;
@@ -63,6 +76,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         <p className="eyebrow">System State</p>
         <h1>{message}</h1>
         <p>{details}</p>
+        {requestId ? <p>request_id: {requestId}</p> : null}
         {stack ? <pre>{stack}</pre> : null}
       </div>
     </main>
