@@ -4,6 +4,7 @@ import { WorkspaceShell } from "~/shared/ui/WorkspaceShell";
 
 import type { TaskIntakeActionResult } from "../server/task-intake.server";
 import type { WorkspaceViewModel } from "../server/workspace-view.server";
+import { TaskSyncBridge } from "./TaskSyncBridge";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { TaskListPanel } from "./TaskListPanel";
 
@@ -27,10 +28,12 @@ export function CreatorWorkspaceScreen({
       panels={loaderData.panels}
       actionData={actionData ?? null}
       taskListPanel={
-        <TaskListPanel
-          taskList={loaderData.taskList}
-          selectedTaskId={loaderData.selectedTask?.id ?? null}
-        />
+        <TaskSyncBridge taskId={loaderData.selectedTask?.id ?? null}>
+          <TaskListPanel
+            taskList={loaderData.taskList}
+            selectedTaskId={loaderData.selectedTask?.id ?? null}
+          />
+        </TaskSyncBridge>
       }
       taskDetailPanel={<TaskDetailPanel task={loaderData.selectedTask} />}
       logoutForm={

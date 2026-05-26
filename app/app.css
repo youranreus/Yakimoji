@@ -49,6 +49,22 @@ body {
   grid-template-columns: minmax(20rem, 1.05fr) minmax(0, 1.25fr);
 }
 
+.task-sync-bridge {
+  display: grid;
+  gap: 1rem;
+}
+
+.task-sync-status {
+  padding: 1.25rem;
+}
+
+.task-sync-status-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
 .shell-panel {
   border: 1px solid var(--panel-border);
   border-radius: 1.5rem;
