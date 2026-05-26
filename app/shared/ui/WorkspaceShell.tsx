@@ -67,29 +67,15 @@ type WorkspaceShellProps = {
     title: string;
     body: string;
   }>;
-  recentTasks: Array<{
-    id: string;
-    status: string;
-    intakeMethod: "youtube_link" | "video_upload";
-    sourceIdentifier: string;
-    sourceTitle: string;
-    baselineSummary: string;
-    createdAt: string;
-  }>;
   actionData: TaskPreviewPayload | TaskCreatedPayload | TaskErrorPayload | null;
+  taskListPanel: React.ReactNode;
+  taskDetailPanel: React.ReactNode;
   logoutForm: React.ReactNode;
 };
 
 const youtubeSchema = z.object({
   sourceUrl: z.url("请输入有效的 YouTube 链接。"),
 });
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("zh-CN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 function formatSize(size: number) {
   if (size < 1024 * 1024) {
@@ -107,8 +93,9 @@ export function WorkspaceShell({
   roles,
   navigation,
   panels,
-  recentTasks,
   actionData,
+  taskListPanel,
+  taskDetailPanel,
   logoutForm,
 }: WorkspaceShellProps) {
   const youtubeFetcher = useFetcher<TaskPreviewPayload | TaskErrorPayload>();
@@ -366,26 +353,11 @@ export function WorkspaceShell({
       </section>
 
       <section className="shell-grid workspace-bottom-grid">
-        <article className="shell-panel recent-task-panel">
-          <p className="eyebrow">Recent Tasks</p>
-          <h2>最近创建任务</h2>
-          <div className="recent-task-list">
-            {(created ? [created.task, ...recentTasks] : recentTasks).slice(0, 5).map((task) => (
-              <section className="recent-task-item" key={task.id}>
-                <div className="recent-task-heading">
-                  <h3>{task.sourceTitle}</h3>
-                  <span className="status-pill">{task.status}</span>
-                </div>
-                <p>{task.baselineSummary}</p>
-                <div className="feedback-meta">
-                  <span>{task.id}</span>
-                  <span>{formatDate(task.createdAt)}</span>
-                </div>
-              </section>
-            ))}
-          </div>
-        </article>
+        {taskListPanel}
+        {taskDetailPanel}
+      </section>
 
+      <section className="shell-grid">
         <article className="shell-panel shell-main-panel">
           <p className="eyebrow">Support Panels</p>
           <div className="panel-stack">
@@ -397,9 +369,7 @@ export function WorkspaceShell({
             ))}
           </div>
         </article>
-      </section>
 
-      <section className="shell-grid">
         <article className="shell-panel">
           <p className="eyebrow">Security Boundaries</p>
           <ul className="shell-list">

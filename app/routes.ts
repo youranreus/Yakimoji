@@ -6,5 +6,6 @@ export default [
   route("auth/callback", "routes/auth.callback.tsx"),
   route("logout", "routes/logout.tsx"),
   route("workspace", "routes/workspace.tsx"),
+  route("workspace/tasks/:taskId", "routes/workspace.task-detail.tsx"),
   route("health", "routes/health.tsx"),
 ] satisfies RouteConfig;

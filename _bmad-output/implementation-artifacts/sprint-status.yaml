@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review in a fresh context
 
 generated: 2026-05-20T23:45:41+0800
-last_updated: 2026-05-25T19:34:41+0800
+last_updated: 2026-05-26T12:06:00+0800
 project: Yakimoji
 project_key: NOKEY
 tracking_system: file-system
@@ -47,7 +47,7 @@ development_status:
   1-2-creator-login-and-protected-workspace-shell: done
   1-3-manual-task-intake-with-source-recognition-preview: done
   1-4-task-lifecycle-state-model-and-persistent-event-ledger: done
-  1-5-creator-task-list-and-detail-status-views: backlog
+  1-5-creator-task-list-and-detail-status-views: done
   1-6-task-status-sync-via-sse-with-polling-fallback: backlog
   1-7-completed-deliverables-and-secure-result-access: backlog
   epic-1-retrospective: optional

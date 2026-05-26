@@ -46,6 +46,7 @@ body {
 
 .workspace-bottom-grid {
   margin-top: 1.25rem;
+  grid-template-columns: minmax(20rem, 1.05fr) minmax(0, 1.25fr);
 }
 
 .shell-panel {
@@ -318,6 +319,26 @@ body {
   font-weight: 700;
 }
 
+.status-pill-info {
+  background: rgba(40, 102, 190, 0.12);
+  color: #1f4f96;
+}
+
+.status-pill-warning {
+  background: rgba(181, 120, 16, 0.14);
+  color: #8a580d;
+}
+
+.status-pill-danger {
+  background: rgba(164, 50, 34, 0.14);
+  color: #8f2418;
+}
+
+.status-pill-success {
+  background: rgba(37, 99, 69, 0.14);
+  color: #1f6a46;
+}
+
 .mini-panel {
   padding: 1rem 1.1rem;
   border-radius: 1rem;
@@ -440,6 +461,267 @@ body {
   background: rgba(31, 41, 55, 0.08);
   color: var(--ink);
   min-height: 3rem;
+  text-decoration: none;
+}
+
+.task-list-panel,
+.task-detail-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.task-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.task-panel-header h2,
+.task-detail-section-heading h3 {
+  margin: 0;
+  font-size: 1.85rem;
+}
+
+.task-panel-copy,
+.task-loading-copy,
+.task-stage-description,
+.task-card-subtitle,
+.task-empty-state p,
+.task-ledger-item p,
+.task-summary-grid dt {
+  color: var(--muted);
+}
+
+.task-loading-copy {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.task-card-stack,
+.task-detail-stack,
+.task-ledger {
+  display: grid;
+  gap: 1rem;
+}
+
+.task-card-link,
+.task-summary-card,
+.task-timeline-panel,
+.task-empty-state,
+.task-ledger-item {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(143, 78, 23, 0.12);
+  background: rgba(255, 252, 246, 0.9);
+}
+
+.task-card-link,
+.task-summary-card,
+.task-timeline-panel,
+.task-empty-state {
+  padding: 1.15rem;
+}
+
+.task-card-link {
+  display: grid;
+  gap: 1rem;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.task-card-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(143, 78, 23, 0.28);
+  box-shadow: 0 16px 32px rgba(28, 25, 23, 0.08);
+}
+
+.task-card-link:focus-visible,
+.pagination-link:focus-visible,
+.detail-back-link:focus-visible {
+  outline: 2px solid rgba(143, 78, 23, 0.4);
+  outline-offset: 2px;
+}
+
+.task-card-link-active {
+  border-color: rgba(143, 78, 23, 0.36);
+  box-shadow: inset 0 0 0 1px rgba(143, 78, 23, 0.18);
+}
+
+.task-card-heading,
+.task-summary-heading,
+.task-ledger-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.task-card-title,
+.task-ledger-topline h4 {
+  margin: 0;
+  font-family: "Iowan Old Style", "Times New Roman", serif;
+  font-size: 1.05rem;
+}
+
+.task-card-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.92rem;
+}
+
+.task-card-ledger,
+.task-summary-grid {
+  margin: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.task-card-ledger div,
+.task-summary-grid div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.task-card-ledger dt,
+.task-summary-grid dt {
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.task-card-ledger dd,
+.task-summary-grid dd {
+  margin: 0;
+  line-height: 1.55;
+  font-weight: 600;
+}
+
+.task-pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.pagination-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 6rem;
+}
+
+.pagination-link-disabled {
+  min-height: 3rem;
+  padding: 0.8rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.05);
+  color: #8b8480;
+}
+
+.pagination-summary {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.task-empty-state h3 {
+  margin: 0 0 0.5rem;
+  font-family: "Iowan Old Style", "Times New Roman", serif;
+}
+
+.detail-back-link {
+  justify-self: start;
+}
+
+.task-detail-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.task-summary-grid {
+  margin-top: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.task-stage-track {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.task-stage-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.task-stage-marker {
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  background: rgba(143, 78, 23, 0.2);
+  box-shadow: 0 0 0 6px rgba(143, 78, 23, 0.08);
+}
+
+.task-stage-item-completed .task-stage-marker {
+  background: #2b8a57;
+  box-shadow: 0 0 0 6px rgba(43, 138, 87, 0.12);
+}
+
+.task-stage-item-current .task-stage-marker {
+  background: #1f4f96;
+  box-shadow: 0 0 0 6px rgba(31, 79, 150, 0.12);
+}
+
+.task-stage-item-attention .task-stage-marker {
+  background: #8a580d;
+  box-shadow: 0 0 0 6px rgba(138, 88, 13, 0.12);
+}
+
+.task-stage-item-terminal .task-stage-marker {
+  background: #8f2418;
+  box-shadow: 0 0 0 6px rgba(143, 36, 24, 0.12);
+}
+
+.task-stage-label {
+  margin: 0;
+  font-weight: 700;
+}
+
+.task-stage-description {
+  margin: 0.25rem 0 0;
+  line-height: 1.55;
+}
+
+.task-ledger-item {
+  padding: 1rem 1.05rem;
+}
+
+.task-ledger-item-current {
+  border-color: rgba(31, 79, 150, 0.2);
+}
+
+.task-ledger-item-attention {
+  border-color: rgba(138, 88, 13, 0.24);
+  background: rgba(255, 248, 237, 0.96);
+}
+
+.task-ledger-item-terminal {
+  border-color: rgba(143, 36, 24, 0.24);
+  background: rgba(255, 243, 240, 0.96);
+}
+
+.task-ledger-topline span {
+  color: var(--muted);
+  font-size: 0.88rem;
 }
 
 .auth-notes {
@@ -488,14 +770,25 @@ pre {
   }
 
   .workspace-top-grid,
+  .workspace-bottom-grid,
   .intake-grid,
   .preview-ledger,
-  .confirm-card {
+  .confirm-card,
+  .task-summary-grid {
     grid-template-columns: 1fr;
   }
 
   .intake-panel-header,
-  .recent-task-heading {
+  .task-panel-header,
+  .task-detail-section-heading,
+  .task-card-heading,
+  .task-summary-heading,
+  .task-ledger-topline {
     flex-direction: column;
+  }
+
+  .task-pagination {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
