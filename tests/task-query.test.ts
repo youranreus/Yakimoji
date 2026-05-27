@@ -59,6 +59,9 @@ function makeEvent(
 
 test.beforeEach(() => {
   setTaskQueryTestHooks({});
+  setTaskQueryTestHooks({
+    listDeliverablesForTaskDetailImpl: async () => [],
+  });
 });
 
 test("paginated task list returns only the requested page and pagination metadata", async () => {
@@ -135,6 +138,7 @@ test("task detail returns an oldest-to-newest event ledger and readable status s
     getTaskRowForUserImpl: async () => task,
     getTaskEventLedgerImpl: async () => events,
     getLatestTaskEventForTaskImpl: async () => events.at(-1) ?? null,
+    listDeliverablesForTaskDetailImpl: async () => [],
   });
 
   const detail = await runWithRequestContext(
@@ -153,6 +157,46 @@ test("task detail returns an oldest-to-newest event ledger and readable status s
   );
   assert.equal(detail.events[0]?.stageState, "completed");
   assert.equal(detail.events.at(-1)?.stageState, "attention");
+});
+
+test("completed task with time-expired ready deliverables surfaces expired result semantics", async () => {
+  const task = makeTask(2, {
+    status: "completed",
+  });
+
+  setTaskQueryTestHooks({
+    getTaskRowForUserImpl: async () => task,
+    getTaskEventLedgerImpl: async () => [],
+    getLatestTaskEventForTaskImpl: async () => null,
+    listDeliverablesForTaskDetailImpl: async () => [
+      {
+        id: "deliverable_2",
+        taskId: "task_2",
+        kind: "video",
+        kindLabel: "成品视频",
+        fileName: "final.mp4",
+        mimeType: "video/mp4",
+        fileSizeLabel: "12 MB",
+        status: "expired",
+        statusLabel: "已过期",
+        canDownload: false,
+        availableAt: "2026-05-25T01:00:00.000Z",
+        expiresAt: "2026-05-26T01:00:00.000Z",
+        downloadAction: null,
+      },
+    ],
+  });
+
+  const detail = await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_detail_expired_result",
+    }),
+    async () => getTaskDetailForUser(7, "task_2"),
+  );
+
+  assert.equal(detail.resultStatus.label, "结果已过期");
+  assert.equal(detail.resultStatus.tone, "danger");
+  assert.equal(detail.deliverables[0]?.statusLabel, "已过期");
 });
 
 test("failed task without a last active event keeps the terminal timeline ambiguous instead of fabricating processing", () => {

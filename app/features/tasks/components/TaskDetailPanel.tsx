@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigation } from "react-router";
 
 import type { TaskDetailView } from "../server/task-query.server";
+import { TaskDeliverablesCard } from "./TaskDeliverablesCard";
 import { TaskDetailTimeline } from "./TaskDetailTimeline";
 import { TaskStatusSummaryCard } from "./TaskStatusSummaryCard";
 
@@ -38,13 +39,14 @@ export function TaskDetailPanel({
             返回任务列表
           </Link>
           <TaskStatusSummaryCard task={task} />
+          <TaskDeliverablesCard task={task} />
           <TaskDetailTimeline task={task} />
         </div>
       ) : (
         <section className="task-empty-state" aria-live="polite">
           <h3>选择一个任务查看状态账本</h3>
           <p>
-            任务详情支持直达、分享和刷新。你可以从左侧列表进入某个任务，查看当前阶段、关键进展和完整时间线。
+            任务详情支持直达、分享和刷新。你可以从左侧列表进入某个任务，查看当前阶段、可交付结果和完整时间线。
           </p>
         </section>
       )}

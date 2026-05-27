@@ -516,7 +516,8 @@ body {
 
 .task-card-stack,
 .task-detail-stack,
-.task-ledger {
+.task-ledger,
+.task-deliverables-list {
   display: grid;
   gap: 1rem;
 }
@@ -524,6 +525,7 @@ body {
 .task-card-link,
 .task-summary-card,
 .task-timeline-panel,
+.task-deliverables-card,
 .task-empty-state,
 .task-ledger-item {
   border-radius: 1.25rem;
@@ -533,6 +535,7 @@ body {
 
 .task-card-link,
 .task-summary-card,
+.task-deliverables-card,
 .task-timeline-panel,
 .task-empty-state {
   padding: 1.15rem;
@@ -569,6 +572,7 @@ body {
 
 .task-card-heading,
 .task-summary-heading,
+.task-detail-section-heading,
 .task-ledger-topline {
   display: flex;
   justify-content: space-between;
@@ -613,6 +617,72 @@ body {
   margin: 0;
   line-height: 1.55;
   font-weight: 600;
+}
+
+.task-deliverables-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.task-deliverables-empty h4,
+.task-deliverable-title {
+  margin: 0;
+  font-family: "Iowan Old Style", "Times New Roman", serif;
+}
+
+.task-deliverables-empty {
+  padding: 1rem 1.1rem;
+}
+
+.task-deliverables-empty h4 {
+  font-size: 1.05rem;
+}
+
+.task-deliverables-list {
+  margin-top: 0.25rem;
+}
+
+.task-deliverable-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(41, 37, 36, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.task-deliverable-meta {
+  margin: 0.8rem 0 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.task-deliverable-meta div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.task-deliverable-meta dt {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.task-deliverable-meta dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.deliverable-link {
+  align-self: center;
+  white-space: nowrap;
+}
+
+.deliverable-link-disabled {
+  color: var(--muted);
+  background: rgba(31, 41, 55, 0.05);
 }
 
 .task-pagination {

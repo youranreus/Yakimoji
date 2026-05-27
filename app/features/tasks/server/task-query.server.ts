@@ -4,6 +4,10 @@ import { data } from "react-router";
 import { database } from "../../../../database/context";
 import { taskEvents, tasks } from "../../../../database/schema";
 import { getRequestContext } from "../../auth/server/request-context.server";
+import {
+  listDeliverablesForTaskDetail,
+  type DeliverableView,
+} from "../../deliverables/server/deliverable-query.server";
 
 import {
   buildTaskStageTimeline,
@@ -103,6 +107,12 @@ export type TaskDetailView = {
   createdAt: string;
   updatedAt: string;
   nextStepLabel: string;
+  resultStatus: {
+    label: string;
+    description: string;
+    tone: "neutral" | "info" | "warning" | "danger" | "success";
+  };
+  deliverables: DeliverableView[];
   stages: TaskStageView[];
   events: TaskTimelineEventView[];
 };
@@ -171,6 +181,7 @@ export const taskQueryTestHooks = {
   getTaskRowByIdImpl: getTaskRowById,
   getTaskEventLedgerImpl: getTaskEventLedger,
   getLatestTaskEventForTaskImpl: getLatestTaskEventForTask,
+  listDeliverablesForTaskDetailImpl: listDeliverablesForTaskDetail,
 };
 
 export function setTaskQueryTestHooks(
@@ -188,6 +199,8 @@ export function setTaskQueryTestHooks(
     hooks.getTaskEventLedgerImpl ?? getTaskEventLedger;
   taskQueryTestHooks.getLatestTaskEventForTaskImpl =
     hooks.getLatestTaskEventForTaskImpl ?? getLatestTaskEventForTask;
+  taskQueryTestHooks.listDeliverablesForTaskDetailImpl =
+    hooks.listDeliverablesForTaskDetailImpl ?? listDeliverablesForTaskDetail;
 }
 
 function normalizePage(value?: number) {
@@ -251,6 +264,72 @@ function getNextStepLabel(status: TaskStatus) {
     case "cancelled":
       return "如需继续处理，请重新创建任务";
   }
+}
+
+function getResultStatus(
+  taskStatus: TaskStatus,
+  deliverables: DeliverableView[],
+) {
+  const readyCount = deliverables.filter(
+    (deliverable) => deliverable.status === "ready" && deliverable.canDownload,
+  ).length;
+  const expiredCount = deliverables.filter(
+    (deliverable) => deliverable.status === "expired",
+  ).length;
+
+  if (taskStatus !== "completed") {
+    if (taskStatus === "failed" || taskStatus === "cancelled") {
+      return {
+        label: "结果不可用",
+        description: "任务尚未产出可交付结果。",
+        tone: "danger" as const,
+      };
+    }
+
+    return {
+      label: "结果生成中",
+      description: "任务仍在处理中，交付物尚未就绪。",
+      tone: "info" as const,
+    };
+  }
+
+  if (deliverables.length === 0) {
+    return {
+      label: "结果待生成",
+      description: "任务已完成，但可交付文件尚未生成。",
+      tone: "warning" as const,
+    };
+  }
+
+  if (readyCount === deliverables.length) {
+    return {
+      label: "结果可交付",
+      description: "成品视频和字幕文件都已准备完成，可直接下载。",
+      tone: "success" as const,
+    };
+  }
+
+  if (readyCount > 0) {
+    return {
+      label: "结果部分可用",
+      description: "部分交付物已就绪，其他文件仍在生成或已过期。",
+      tone: "warning" as const,
+    };
+  }
+
+  if (expiredCount > 0) {
+    return {
+      label: "结果已过期",
+      description: "交付物已超过保留期，需要重新生成。",
+      tone: "danger" as const,
+    };
+  }
+
+  return {
+    label: "结果暂不可用",
+    description: "当前还没有可以下载的成品文件。",
+    tone: "warning" as const,
+  };
 }
 
 function createTaskReadError(
@@ -533,11 +612,17 @@ export async function getTaskDetailForUser(
   const latestEvent =
     events.at(-1) ??
     (await taskQueryTestHooks.getLatestTaskEventForTaskImpl(taskId));
+  const deliverables =
+    await taskQueryTestHooks.listDeliverablesForTaskDetailImpl(
+      userId,
+      ownedTask.id,
+    );
   const statusPresentation = getTaskStatusPresentation(ownedTask.status);
   const latestCopy = getEventCopy(
     latestEvent?.eventType ?? null,
     ownedTask.status,
   );
+  const resultStatus = getResultStatus(ownedTask.status, deliverables);
 
   return {
     id: ownedTask.id,
@@ -557,6 +642,8 @@ export async function getTaskDetailForUser(
     createdAt: ownedTask.createdAt.toISOString(),
     updatedAt: ownedTask.updatedAt.toISOString(),
     nextStepLabel: getNextStepLabel(ownedTask.status),
+    resultStatus,
+    deliverables,
     stages: buildTaskStageTimeline(ownedTask.status, {
       lastActiveStatus: latestEvent?.fromStatus ?? null,
     }),
