@@ -6,6 +6,7 @@ import {
 } from "~/features/tasks/components/CreatorWorkspaceScreen";
 import { requireRole } from "~/features/auth/server/authz.server";
 import { requireUserSession } from "~/features/auth/server/session.server";
+import { handleChannelPresetAction } from "~/features/presets/server/channel-presets.server";
 import {
   handleTaskIntakeAction,
 } from "~/features/tasks/server/task-intake.server";
@@ -35,6 +36,20 @@ export async function action({ request }: Route.ActionArgs) {
     type: "workspace",
     id: "creator-home",
   });
+
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("multipart/form-data")) {
+    const formData = await request.clone().formData();
+    const intent = formData.get("intent");
+
+    if (
+      intent === "create_channel_preset" ||
+      intent === "update_channel_preset"
+    ) {
+      return handleChannelPresetAction(authenticated.user.id, formData);
+    }
+  }
 
   return handleTaskIntakeAction(authenticated.user.id, request);
 }

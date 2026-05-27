@@ -45,6 +45,7 @@ test("workspace view loader keeps /workspace as the default entry and parses pag
       return expectedTaskList;
     },
     getTaskDetailForUserImpl: async () => null,
+    listChannelPresetsForUserImpl: async () => [],
   });
 
   const model = await runWithRequestContext(
@@ -66,6 +67,7 @@ test("workspace view loader keeps /workspace as the default entry and parses pag
   assert.equal(model.navigation[0]?.href, "/workspace");
   assert.equal(model.taskList.meta.pagination.page, 3);
   assert.equal(model.selectedTask, null);
+  assert.deepEqual(model.channelPresets, []);
 });
 
 test("workspace view loader resolves a direct task detail route through the shared shell model", async () => {
@@ -118,10 +120,32 @@ test("workspace view loader resolves a direct task detail route through the shar
         updatedAt: "2026-05-26T01:10:00.000Z",
         nextStepLabel: "等待处理完成",
         statusTone: "info",
+        resultStatus: {
+          label: "结果生成中",
+          description: "任务仍在处理中，交付物尚未就绪。",
+          tone: "info",
+        },
+        deliverables: [],
         stages: [],
         events: [],
       };
     },
+    listChannelPresetsForUserImpl: async () => [
+      {
+        id: "preset_1",
+        sourceIdentifier: "youtube:task_1",
+        displayName: "Task 1 Channel",
+        summary: "中译中字幕 / 标准 Shorts 模板 / mp4 + srt",
+        defaults: {
+          translationMode: "中译中字幕",
+          subtitleTemplate: "标准 Shorts 模板",
+          outputPackage: "mp4 + srt",
+        },
+        notes: null,
+        createdAt: "2026-05-26T01:00:00.000Z",
+        updatedAt: "2026-05-26T01:00:00.000Z",
+      },
+    ],
   });
 
   const model = await runWithRequestContext(
@@ -143,6 +167,7 @@ test("workspace view loader resolves a direct task detail route through the shar
   assert.equal(receivedTaskId, "task_1");
   assert.equal(receivedPage, 2);
   assert.equal(model.selectedTask?.id, "task_1");
+  assert.equal(model.channelPresets[0]?.displayName, "Task 1 Channel");
   assert.equal(model.taskList.meta.pagination.page, 2);
   assert.equal(model.navigation[0]?.href, "/workspace");
   assert.equal(model.panels[0]?.title, "任务状态原则");

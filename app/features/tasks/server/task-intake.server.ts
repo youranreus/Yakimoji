@@ -14,6 +14,10 @@ import { and, desc, eq, lt } from "drizzle-orm";
 import { database } from "../../../../database/context";
 import { taskIntakeDrafts, tasks } from "../../../../database/schema";
 import { getRequestContext } from "../../auth/server/request-context.server";
+import {
+  findChannelPresetForSource,
+  type ChannelPresetView,
+} from "../../presets/server/channel-presets.server";
 
 import { getDefaultProcessingBaseline } from "./task-baseline.server";
 import { recordTaskCreation } from "./task-events.server";
@@ -48,6 +52,7 @@ export type TaskPreviewPayload = {
     previewLabel: string;
   };
   baseline: ReturnType<typeof getDefaultProcessingBaseline>;
+  presetMatch: TaskPresetMatch;
 };
 
 export type TaskCreatedPayload = {
@@ -61,9 +66,25 @@ export type TaskCreatedPayload = {
     sourceIdentifier: string;
     sourceTitle: string;
     baselineSummary: string;
+    presetMatch: TaskPresetMatch;
     createdAt: string;
   };
 };
+
+export type TaskPresetMatch =
+  | {
+      status: "matched";
+      presetId: string;
+      displayName: string;
+      sourceIdentifier: string;
+      summary: string;
+      defaults: ChannelPresetView["defaults"];
+    }
+  | {
+      status: "none";
+      sourceIdentifier: string;
+      summary: string;
+    };
 
 export type TaskIntakeActionResult =
   | TaskPreviewPayload
@@ -75,6 +96,7 @@ export const taskIntakeTestHooks = {
   persistUploadedVideoImpl: persistUploadedVideo,
   deleteStoredUploadImpl: deleteStoredUpload,
   nowImpl: () => new Date(),
+  findChannelPresetForSourceImpl: findChannelPresetForSource,
 };
 
 export function setTaskIntakeTestHooks(
@@ -87,10 +109,34 @@ export function setTaskIntakeTestHooks(
   taskIntakeTestHooks.deleteStoredUploadImpl =
     hooks.deleteStoredUploadImpl ?? deleteStoredUpload;
   taskIntakeTestHooks.nowImpl = hooks.nowImpl ?? (() => new Date());
+  taskIntakeTestHooks.findChannelPresetForSourceImpl =
+    hooks.findChannelPresetForSourceImpl ?? findChannelPresetForSource;
 }
 
 function buildBaselineSummary(baseline: ReturnType<typeof getDefaultProcessingBaseline>) {
   return `${baseline.translationMode} / ${baseline.subtitleTemplate} / ${baseline.outputPackage}`;
+}
+
+function buildPresetMatch(
+  sourceIdentifier: string,
+  preset: ChannelPresetView | null,
+): TaskPresetMatch {
+  if (!preset) {
+    return {
+      status: "none",
+      sourceIdentifier,
+      summary: "未命中频道预设，将使用当前默认处理基线。",
+    };
+  }
+
+  return {
+    status: "matched",
+    presetId: preset.id,
+    displayName: preset.displayName,
+    sourceIdentifier: preset.sourceIdentifier,
+    summary: preset.summary,
+    defaults: preset.defaults,
+  };
 }
 
 function assertYoutubeUrlInput(value: FormDataEntryValue | null) {
@@ -225,7 +271,6 @@ async function createYoutubePreviewDraft(
   sourceUrl: string,
 ): Promise<TaskPreviewPayload> {
   const requestId = getRequestContext().requestId;
-  const baseline = getDefaultProcessingBaseline();
   let source;
 
   try {
@@ -237,6 +282,16 @@ async function createYoutubePreviewDraft(
       { field: "sourceUrl" },
     );
   }
+
+  const preset = await taskIntakeTestHooks.findChannelPresetForSourceImpl(
+    userId,
+    source.identifier,
+  );
+  const presetMatch = buildPresetMatch(source.identifier, preset);
+  const baseline =
+    presetMatch.status === "matched"
+      ? presetMatch.defaults
+      : getDefaultProcessingBaseline();
 
   const draftToken = `draft_${randomUUID().replace(/-/g, "")}`;
   const now = taskIntakeTestHooks.nowImpl();
@@ -254,6 +309,7 @@ async function createYoutubePreviewDraft(
       confidence: source.confidence,
       recognitionMode: source.recognitionMode,
       previewLabel: source.previewLabel,
+      presetMatch,
       requestId,
     },
     processingBaselineSnapshot: baseline,
@@ -272,6 +328,7 @@ async function createYoutubePreviewDraft(
     status: "resolving_source",
     source,
     baseline,
+    presetMatch,
   };
 }
 
@@ -350,7 +407,11 @@ export async function confirmTaskCreation(
     confidence?: string;
     recognitionMode?: string;
     previewLabel?: string;
+    presetMatch?: TaskPresetMatch;
   };
+  const presetMatch =
+    sourceSnapshot.presetMatch ??
+    buildPresetMatch(draft.sourceIdentifier ?? "youtube:unknown", null);
 
   await db.transaction(async (tx) => {
     await tx.insert(tasks).values({
@@ -364,9 +425,12 @@ export async function confirmTaskCreation(
         confidence: sourceSnapshot.confidence,
         recognitionMode: sourceSnapshot.recognitionMode,
         previewLabel: sourceSnapshot.previewLabel,
+        presetMatch,
         requestId,
       },
       processingBaselineSnapshot: baseline,
+      presetId: presetMatch.status === "matched" ? presetMatch.presetId : null,
+      presetSnapshot: presetMatch,
       uploadStorageKey: draft.uploadStorageKey,
       status: initialTaskStatus,
       createdAt: now,
@@ -393,6 +457,7 @@ export async function confirmTaskCreation(
       sourceIdentifier: draft.sourceIdentifier ?? "youtube:unknown",
       sourceTitle: sourceSnapshot.title ?? draft.sourceIdentifier ?? "未知来源",
       baselineSummary: buildBaselineSummary(baseline),
+      presetMatch,
       createdAt: now.toISOString(),
     },
   };

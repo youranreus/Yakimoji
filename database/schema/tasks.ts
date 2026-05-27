@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { users } from "./auth";
+import { channelPresets } from "./channel-presets";
 
 export const tasks = pgTable(
   "tasks",
@@ -28,6 +29,14 @@ export const tasks = pgTable(
       .$type<Record<string, unknown>>()
       .notNull()
       .default({}),
+    presetId: varchar("preset_id", { length: 64 }).references(
+      () => channelPresets.id,
+      { onDelete: "set null" },
+    ),
+    presetSnapshot: jsonb("preset_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
     uploadStorageKey: text("upload_storage_key"),
     status: varchar("status", { length: 32 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -37,6 +46,7 @@ export const tasks = pgTable(
     index("tasks_creator_user_id_idx").on(table.creatorUserId),
     index("tasks_status_idx").on(table.status),
     index("tasks_source_identifier_idx").on(table.sourceIdentifier),
+    index("tasks_preset_id_idx").on(table.presetId),
   ],
 );
 

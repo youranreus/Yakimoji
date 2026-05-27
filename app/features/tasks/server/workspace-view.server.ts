@@ -1,4 +1,8 @@
 import type { AllowedRole } from "../../../../database/schema";
+import {
+  listChannelPresetsForUser,
+  type ChannelPresetView,
+} from "../../presets/server/channel-presets.server";
 import { requireRole } from "../../auth/server/authz.server";
 import {
   getCurrentUserRoles,
@@ -40,6 +44,7 @@ export type WorkspaceViewModel = {
   }>;
   taskList: PaginatedTaskList;
   selectedTask: TaskDetailView | null;
+  channelPresets: ChannelPresetView[];
 };
 
 export const workspaceViewTestHooks = {
@@ -48,6 +53,7 @@ export const workspaceViewTestHooks = {
   requireRoleImpl: requireRole,
   listPaginatedTasksForUserImpl: listPaginatedTasksForUser,
   getTaskDetailForUserImpl: getTaskDetailForUser,
+  listChannelPresetsForUserImpl: listChannelPresetsForUser,
 };
 
 export function setWorkspaceViewTestHooks(
@@ -63,6 +69,8 @@ export function setWorkspaceViewTestHooks(
     hooks.listPaginatedTasksForUserImpl ?? listPaginatedTasksForUser;
   workspaceViewTestHooks.getTaskDetailForUserImpl =
     hooks.getTaskDetailForUserImpl ?? getTaskDetailForUser;
+  workspaceViewTestHooks.listChannelPresetsForUserImpl =
+    hooks.listChannelPresetsForUserImpl ?? listChannelPresetsForUser;
 }
 
 function parsePage(url: string) {
@@ -79,7 +87,7 @@ function buildNavigation() {
   return [
     { label: "工作台总览", href: "/workspace", state: "active" as const },
     { label: "任务导入", href: "/workspace", state: "active" as const },
-    { label: "预设", href: "#", state: "coming-soon" as const },
+    { label: "预设", href: "/workspace#presets", state: "active" as const },
     { label: "Review", href: "#", state: "coming-soon" as const },
     { label: "交付", href: "#", state: "coming-soon" as const },
   ];
@@ -132,6 +140,10 @@ export async function loadWorkspaceViewModel(args: {
         args.taskId,
       )
     : null;
+  const channelPresets =
+    await workspaceViewTestHooks.listChannelPresetsForUserImpl(
+      authenticated.user.id,
+    );
 
   return {
     requestId: args.context.requestId,
@@ -147,5 +159,6 @@ export async function loadWorkspaceViewModel(args: {
     panels: buildPanels(),
     taskList,
     selectedTask,
+    channelPresets,
   };
 }

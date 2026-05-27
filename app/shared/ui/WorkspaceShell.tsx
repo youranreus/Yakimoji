@@ -23,6 +23,7 @@ type TaskPreviewPayload = {
     subtitleTemplate: string;
     outputPackage: string;
   };
+  presetMatch: TaskPresetMatch;
 };
 
 type TaskCreatedPayload = {
@@ -36,9 +37,29 @@ type TaskCreatedPayload = {
     sourceIdentifier: string;
     sourceTitle: string;
     baselineSummary: string;
+    presetMatch: TaskPresetMatch;
     createdAt: string;
   };
 };
+
+type TaskPresetMatch =
+  | {
+      status: "matched";
+      presetId: string;
+      displayName: string;
+      sourceIdentifier: string;
+      summary: string;
+      defaults: {
+        translationMode: string;
+        subtitleTemplate: string;
+        outputPackage: string;
+      };
+    }
+  | {
+      status: "none";
+      sourceIdentifier: string;
+      summary: string;
+    };
 
 type TaskErrorPayload = {
   ok: false;
@@ -68,6 +89,7 @@ type WorkspaceShellProps = {
     body: string;
   }>;
   actionData: TaskPreviewPayload | TaskCreatedPayload | TaskErrorPayload | null;
+  presetPanel: React.ReactNode;
   taskListPanel: React.ReactNode;
   taskDetailPanel: React.ReactNode;
   logoutForm: React.ReactNode;
@@ -94,6 +116,7 @@ export function WorkspaceShell({
   navigation,
   panels,
   actionData,
+  presetPanel,
   taskListPanel,
   taskDetailPanel,
   logoutForm,
@@ -317,6 +340,33 @@ export function WorkspaceShell({
                   </dl>
                 </section>
 
+                <section className="ledger-card">
+                  <p className="eyebrow">Preset Match</p>
+                  <h3>
+                    {preview.presetMatch.status === "matched"
+                      ? preview.presetMatch.displayName
+                      : "未命中频道预设"}
+                  </h3>
+                  <dl className="ledger-list">
+                    <div>
+                      <dt>匹配状态</dt>
+                      <dd>
+                        {preview.presetMatch.status === "matched"
+                          ? "命中已有预设"
+                          : "使用默认基线"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>来源标识</dt>
+                      <dd>{preview.presetMatch.sourceIdentifier}</dd>
+                    </div>
+                    <div>
+                      <dt>应用摘要</dt>
+                      <dd>{preview.presetMatch.summary}</dd>
+                    </div>
+                  </dl>
+                </section>
+
               </div>
 
               <confirmFetcher.Form method="post" className="confirm-card">
@@ -345,12 +395,19 @@ export function WorkspaceShell({
               </p>
               <div className="feedback-meta">
                 <span>{created.task.baselineSummary}</span>
+                <span>
+                  {created.task.presetMatch.status === "matched"
+                    ? `命中预设: ${created.task.presetMatch.displayName}`
+                    : "未使用预设"}
+                </span>
                 <span>request_id: {created.requestId}</span>
               </div>
             </section>
           ) : null}
         </article>
       </section>
+
+      {presetPanel}
 
       <section className="shell-grid workspace-bottom-grid">
         {taskListPanel}

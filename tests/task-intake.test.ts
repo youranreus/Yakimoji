@@ -172,7 +172,9 @@ function createFakeDb() {
 }
 
 test.beforeEach(() => {
-  setTaskIntakeTestHooks({});
+  setTaskIntakeTestHooks({
+    findChannelPresetForSourceImpl: async () => null,
+  });
 });
 
 test("valid YouTube link creates a preview context with baseline summary inputs", async () => {
@@ -198,6 +200,7 @@ test("valid YouTube link creates a preview context with baseline summary inputs"
         assert.equal(response.requestId, "req_preview_youtube");
         assert.equal(response.status, "resolving_source");
         assert.equal(response.source.identifier, "youtube:KurzgesagtCN");
+        assert.equal(response.presetMatch.status, "none");
         assert.match(response.baseline.translationMode, /中译中/);
         assert.ok(response.draftToken.startsWith("draft_"));
         assert.equal(fake.draftRows.size, 1);
@@ -262,10 +265,12 @@ test("confirm creation persists a real task record and consumes the draft atomic
         assert.equal(created.mode, "created");
         assert.equal(created.requestId, "req_confirm_task");
         assert.equal(created.task.status, "created");
+        assert.equal(created.task.presetMatch.status, "none");
         assert.equal(fake.taskRows.length, 1);
         assert.equal(fake.taskEventRows.length, 1);
         assert.equal(fake.taskRows[0]?.creatorUserId, 42);
         assert.equal(fake.taskRows[0]?.sourceIdentifier, "youtube:KurzgesagtCN");
+        assert.equal(fake.taskRows[0]?.presetId, null);
         assert.equal(fake.taskEventRows[0]?.eventType, "task.created");
         assert.equal(fake.taskEventRows[0]?.toStatus, "created");
         assert.equal(fake.taskEventRows[0]?.requestId, "req_confirm_task");
@@ -280,6 +285,62 @@ test("confirm creation persists a real task record and consumes the draft atomic
         const recent = await listRecentTasksForUser(42);
         assert.equal(recent.length, 1);
         assert.equal(recent[0]?.id, created.task.id);
+      });
+    },
+  );
+});
+
+test("familiar source preview applies a matched channel preset baseline and persists the preset snapshot", async () => {
+  const fake = createFakeDb();
+
+  setTaskIntakeTestHooks({
+    findChannelPresetForSourceImpl: async () => ({
+      id: "preset_kurz",
+      sourceIdentifier: "youtube:KurzgesagtCN",
+      displayName: "Kurzgesagt 中文频道",
+      summary: "英译中字幕 / 科普模板 / mp4 + srt",
+      defaults: {
+        translationMode: "英译中字幕",
+        subtitleTemplate: "科普模板",
+        outputPackage: "mp4 + srt",
+      },
+      notes: null,
+      createdAt: "2026-05-27T00:00:00.000Z",
+      updatedAt: "2026-05-27T00:00:00.000Z",
+    }),
+  });
+
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_preset_match",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        const preview = await handleTaskIntakeAction(
+          42,
+          makeUrlEncodedRequest({
+            intent: "preview_youtube",
+            sourceUrl: "https://www.youtube.com/watch?v=abc123&ab_channel=KurzgesagtCN",
+          }, "req_preset_match"),
+        );
+
+        assert.equal(preview.mode, "preview");
+        assert.equal(preview.presetMatch.status, "matched");
+        assert.equal(preview.baseline.translationMode, "英译中字幕");
+
+        const formData = new FormData();
+        formData.set("intent", "confirm");
+        formData.set("draftToken", preview.draftToken);
+
+        const created = await confirmTaskCreation(42, formData);
+
+        assert.equal(created.task.presetMatch.status, "matched");
+        assert.equal(fake.taskRows[0]?.presetId, "preset_kurz");
+        assert.deepEqual(fake.taskRows[0]?.processingBaselineSnapshot, {
+          translationMode: "英译中字幕",
+          subtitleTemplate: "科普模板",
+          outputPackage: "mp4 + srt",
+        });
       });
     },
   );
