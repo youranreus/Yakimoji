@@ -29,6 +29,10 @@ function makeTask(index: number, overrides: Record<string, unknown> = {}) {
       subtitleTemplate: "标准模板",
       outputPackage: "SRT",
     },
+    presetSnapshot: {
+      status: "none",
+      summary: "未命中频道预设，将使用当前默认处理基线。",
+    },
     status: "processing",
     createdAt,
     updatedAt,
@@ -115,6 +119,13 @@ test("paginated task list returns only the requested page and pagination metadat
 test("task detail returns an oldest-to-newest event ledger and readable status semantics", async () => {
   const task = makeTask(1, {
     status: "awaiting_human_review",
+    presetSnapshot: {
+      status: "manual_reuse",
+      summary: "手动复用预设「复用科普模板」继续当前任务：英译中字幕 / 科普模板 / mp4 + srt",
+      defaults: {
+        subtitleTemplate: "科普模板",
+      },
+    },
   });
   const events = [
     makeEvent("task_1", "task.created", "2026-05-26T01:00:00.000Z", {
@@ -149,6 +160,11 @@ test("task detail returns an oldest-to-newest event ledger and readable status s
   );
 
   assert.equal(detail.id, "task_1");
+  assert.equal(detail.presetContextLabel, "手动复用已有预设");
+  assert.match(detail.presetContextSummary, /手动复用预设/);
+  assert.equal(detail.baselineSummary, "中译中 / 标准模板 / SRT");
+  assert.equal(detail.subtitleTemplateContextLabel, "沿用预设默认模板");
+  assert.match(detail.subtitleTemplateContextSummary, /科普模板/);
   assert.equal(detail.currentStageLabel, "等待人工复核");
   assert.equal(detail.latestProgressLabel, "已进入人工复核队列");
   assert.deepEqual(
@@ -197,6 +213,48 @@ test("completed task with time-expired ready deliverables surfaces expired resul
   assert.equal(detail.resultStatus.label, "结果已过期");
   assert.equal(detail.resultStatus.tone, "danger");
   assert.equal(detail.deliverables[0]?.statusLabel, "已过期");
+});
+
+test("task detail distinguishes task-level subtitle overrides from preset defaults", async () => {
+  const task = makeTask(3, {
+    sourceSnapshot: {
+      title: "Task 3",
+      taskLevelOverrides: {
+        subtitleTemplate: "高对比模板",
+      },
+    },
+    presetSnapshot: {
+      status: "matched",
+      summary: "英译中字幕 / 科普模板 / mp4 + srt",
+      defaults: {
+        subtitleTemplate: "科普模板",
+      },
+    },
+    processingBaselineSnapshot: {
+      translationMode: "英译中字幕",
+      subtitleTemplate: "高对比模板",
+      outputPackage: "mp4 + srt",
+    },
+    status: "processing",
+  });
+
+  setTaskQueryTestHooks({
+    getTaskRowForUserImpl: async () => task,
+    getTaskEventLedgerImpl: async () => [],
+    getLatestTaskEventForTaskImpl: async () => null,
+    listDeliverablesForTaskDetailImpl: async () => [],
+  });
+
+  const detail = await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_detail_override",
+    }),
+    async () => getTaskDetailForUser(7, "task_3"),
+  );
+
+  assert.equal(detail.subtitleTemplateContextLabel, "任务级字幕模板覆盖");
+  assert.match(detail.subtitleTemplateContextSummary, /高对比模板/);
+  assert.match(detail.subtitleTemplateContextSummary, /科普模板/);
 });
 
 test("failed task without a last active event keeps the terminal timeline ambiguous instead of fabricating processing", () => {

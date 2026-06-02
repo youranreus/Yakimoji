@@ -88,6 +88,7 @@ export type ChannelPresetActionResult =
 export const channelPresetTestHooks = {
   listRowsForUserImpl: listRowsForUser,
   findRowBySourceImpl: findRowBySource,
+  findRowByIdImpl: findRowById,
   insertRowImpl: insertRow,
   updateRowForUserImpl: updateRowForUser,
 };
@@ -99,6 +100,8 @@ export function setChannelPresetTestHooks(
     hooks.listRowsForUserImpl ?? listRowsForUser;
   channelPresetTestHooks.findRowBySourceImpl =
     hooks.findRowBySourceImpl ?? findRowBySource;
+  channelPresetTestHooks.findRowByIdImpl =
+    hooks.findRowByIdImpl ?? findRowById;
   channelPresetTestHooks.insertRowImpl = hooks.insertRowImpl ?? insertRow;
   channelPresetTestHooks.updateRowForUserImpl =
     hooks.updateRowForUserImpl ?? updateRowForUser;
@@ -233,6 +236,37 @@ async function findRowBySource(
   return (record as ChannelPresetRow | undefined) ?? null;
 }
 
+async function findRowById(
+  ownerUserId: number,
+  presetId: string,
+): Promise<ChannelPresetRow | null> {
+  const db = database();
+  const [record] = await db
+    .select({
+      id: channelPresets.id,
+      ownerUserId: channelPresets.ownerUserId,
+      sourceIdentifier: channelPresets.sourceIdentifier,
+      displayName: channelPresets.displayName,
+      translationMode: channelPresets.translationMode,
+      subtitleTemplate: channelPresets.subtitleTemplate,
+      outputPackage: channelPresets.outputPackage,
+      notes: channelPresets.notes,
+      metadata: channelPresets.metadata,
+      createdAt: channelPresets.createdAt,
+      updatedAt: channelPresets.updatedAt,
+    })
+    .from(channelPresets)
+    .where(
+      and(
+        eq(channelPresets.ownerUserId, ownerUserId),
+        eq(channelPresets.id, presetId),
+      ),
+    )
+    .limit(1);
+
+  return (record as ChannelPresetRow | undefined) ?? null;
+}
+
 async function insertRow(
   ownerUserId: number,
   input: PresetInput,
@@ -304,6 +338,18 @@ export async function findChannelPresetForSource(
   const row = await channelPresetTestHooks.findRowBySourceImpl(
     ownerUserId,
     sourceIdentifier,
+  );
+
+  return row ? mapPresetView(row) : null;
+}
+
+export async function getChannelPresetByIdForUser(
+  ownerUserId: number,
+  presetId: string,
+) {
+  const row = await channelPresetTestHooks.findRowByIdImpl(
+    ownerUserId,
+    presetId,
   );
 
   return row ? mapPresetView(row) : null;

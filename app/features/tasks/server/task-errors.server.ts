@@ -9,6 +9,7 @@ export type TaskErrorCode =
   | "unsupported_media_type"
   | "upload_failed"
   | "source_recognition_failed"
+  | "manual_resolution_invalid"
   | "confirmation_failed";
 
 export type TaskActionError = {

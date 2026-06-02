@@ -122,6 +122,7 @@ export async function recordTaskCreation(args: {
   taskId: string;
   requestId: string;
   actorUserId?: number | null;
+  payload?: Record<string, unknown>;
   createdAt?: Date;
   db?: PostgresJsDatabase<typeof schema>;
 }) {
@@ -132,7 +133,7 @@ export async function recordTaskCreation(args: {
     toStatus: initialTaskStatus,
     requestId: args.requestId,
     actorUserId: args.actorUserId ?? null,
-    payload: {},
+    payload: args.payload ?? {},
     createdAt: args.createdAt,
     db: args.db,
   });

@@ -23,6 +23,26 @@ export function TaskStatusSummaryCard({
 
       <dl className="task-summary-grid">
         <div>
+          <dt>预设来源</dt>
+          <dd>{task.presetContextLabel}</dd>
+        </div>
+        <div>
+          <dt>预设说明</dt>
+          <dd>{task.presetContextSummary}</dd>
+        </div>
+        <div>
+          <dt>当前生效基线</dt>
+          <dd>{task.baselineSummary}</dd>
+        </div>
+        <div>
+          <dt>字幕模板来源</dt>
+          <dd>{task.subtitleTemplateContextLabel}</dd>
+        </div>
+        <div>
+          <dt>模板说明</dt>
+          <dd>{task.subtitleTemplateContextSummary}</dd>
+        </div>
+        <div>
           <dt>当前阶段</dt>
           <dd>{task.currentStageLabel}</dd>
         </div>

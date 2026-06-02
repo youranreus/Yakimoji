@@ -10,6 +10,7 @@ import {
   setTaskIntakeTestHooks,
 } from "../app/features/tasks/server/task-intake.server";
 import { createRequestContext, runWithRequestContext } from "../app/features/auth/server/request-context.server";
+import { setChannelPresetTestHooks } from "../app/features/presets/server/channel-presets.server";
 import { DatabaseContext } from "../database/context";
 
 function makeUrlEncodedRequest(body: Record<string, string>, requestId = "req_task_test") {
@@ -115,6 +116,21 @@ function createFakeDb() {
         from(table: any) {
           const tableName = table[Symbol.for("drizzle:Name")] ?? "unknown";
 
+          if (tableName === "task_intake_drafts") {
+            return {
+              where() {
+                return {
+                  async limit() {
+                    void selection;
+                    const [firstDraft] = draftRows.values();
+
+                    return firstDraft ? [firstDraft] : [];
+                  },
+                };
+              },
+            };
+          }
+
           if (tableName === "tasks") {
             return {
               where() {
@@ -175,6 +191,7 @@ test.beforeEach(() => {
   setTaskIntakeTestHooks({
     findChannelPresetForSourceImpl: async () => null,
   });
+  setChannelPresetTestHooks({});
 });
 
 test("valid YouTube link creates a preview context with baseline summary inputs", async () => {
@@ -200,7 +217,7 @@ test("valid YouTube link creates a preview context with baseline summary inputs"
         assert.equal(response.requestId, "req_preview_youtube");
         assert.equal(response.status, "resolving_source");
         assert.equal(response.source.identifier, "youtube:KurzgesagtCN");
-        assert.equal(response.presetMatch.status, "none");
+        assert.equal(response.presetMatch.status, "unresolved");
         assert.match(response.baseline.translationMode, /中译中/);
         assert.ok(response.draftToken.startsWith("draft_"));
         assert.equal(fake.draftRows.size, 1);
@@ -257,7 +274,7 @@ test("confirm creation persists a real task record and consumes the draft atomic
         assert.equal(preview.mode, "preview");
 
         const formData = new FormData();
-        formData.set("intent", "confirm");
+        formData.set("intent", "confirm_continue_without_preset");
         formData.set("draftToken", preview.draftToken);
 
         const created = await confirmTaskCreation(42, formData);
@@ -265,12 +282,16 @@ test("confirm creation persists a real task record and consumes the draft atomic
         assert.equal(created.mode, "created");
         assert.equal(created.requestId, "req_confirm_task");
         assert.equal(created.task.status, "created");
-        assert.equal(created.task.presetMatch.status, "none");
+        assert.equal(created.task.presetMatch.status, "continue_without_preset");
         assert.equal(fake.taskRows.length, 1);
         assert.equal(fake.taskEventRows.length, 1);
         assert.equal(fake.taskRows[0]?.creatorUserId, 42);
         assert.equal(fake.taskRows[0]?.sourceIdentifier, "youtube:KurzgesagtCN");
         assert.equal(fake.taskRows[0]?.presetId, null);
+        assert.equal(
+          (fake.taskRows[0]?.presetSnapshot as { status?: string })?.status,
+          "continue_without_preset",
+        );
         assert.equal(fake.taskEventRows[0]?.eventType, "task.created");
         assert.equal(fake.taskEventRows[0]?.toStatus, "created");
         assert.equal(fake.taskEventRows[0]?.requestId, "req_confirm_task");
@@ -285,6 +306,44 @@ test("confirm creation persists a real task record and consumes the draft atomic
         const recent = await listRecentTasksForUser(42);
         assert.equal(recent.length, 1);
         assert.equal(recent[0]?.id, created.task.id);
+      });
+    },
+  );
+});
+
+test("continue without preset rejects task-level subtitle overrides and keeps the draft context", async () => {
+  const fake = createFakeDb();
+
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_continue_without_preset_override",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        const preview = await handleTaskIntakeAction(
+          42,
+          makeUrlEncodedRequest({
+            intent: "preview_youtube",
+            sourceUrl: "https://www.youtube.com/watch?v=abc123&ab_channel=UnknownChannel",
+          }, "req_continue_without_preset_override"),
+        );
+
+        assert.equal(preview.presetMatch.status, "unresolved");
+
+        const formData = new FormData();
+        formData.set("intent", "confirm_continue_without_preset");
+        formData.set("draftToken", preview.draftToken);
+        formData.set("subtitleTemplateOverride", "高对比模板");
+
+        await assert.rejects(confirmTaskCreation(42, formData), (error: any) => {
+          assert.equal(error.constructor?.name, "DataWithResponseInit");
+          assert.equal(error.data.code, "manual_resolution_invalid");
+          assert.equal(error.data.field, "subtitleTemplateOverride");
+          return true;
+        });
+
+        assert.equal(fake.draftRows.size, 1);
+        assert.equal(fake.taskRows.length, 0);
       });
     },
   );
@@ -341,6 +400,302 @@ test("familiar source preview applies a matched channel preset baseline and pers
           subtitleTemplate: "科普模板",
           outputPackage: "mp4 + srt",
         });
+      });
+    },
+  );
+});
+
+test("matched preset flow applies a task-level subtitle template override without mutating preset defaults", async () => {
+  const fake = createFakeDb();
+
+  setTaskIntakeTestHooks({
+    findChannelPresetForSourceImpl: async () => ({
+      id: "preset_kurz",
+      sourceIdentifier: "youtube:KurzgesagtCN",
+      displayName: "Kurzgesagt 中文频道",
+      summary: "英译中字幕 / 科普模板 / mp4 + srt",
+      defaults: {
+        translationMode: "英译中字幕",
+        subtitleTemplate: "科普模板",
+        outputPackage: "mp4 + srt",
+      },
+      notes: null,
+      createdAt: "2026-05-27T00:00:00.000Z",
+      updatedAt: "2026-05-27T00:00:00.000Z",
+    }),
+  });
+
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_task_override_match",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        const preview = await handleTaskIntakeAction(
+          42,
+          makeUrlEncodedRequest({
+            intent: "preview_youtube",
+            sourceUrl: "https://www.youtube.com/watch?v=abc123&ab_channel=KurzgesagtCN",
+          }, "req_task_override_match"),
+        );
+
+        assert.equal(preview.presetMatch.status, "matched");
+
+        const formData = new FormData();
+        formData.set("intent", "confirm");
+        formData.set("draftToken", preview.draftToken);
+        formData.set("subtitleTemplateOverride", "高对比模板");
+
+        const created = await confirmTaskCreation(42, formData);
+
+        assert.equal(created.task.presetMatch.status, "matched");
+        assert.deepEqual(fake.taskRows[0]?.processingBaselineSnapshot, {
+          translationMode: "英译中字幕",
+          subtitleTemplate: "高对比模板",
+          outputPackage: "mp4 + srt",
+        });
+        assert.equal(
+          (
+            fake.taskRows[0]?.sourceSnapshot as {
+              taskLevelOverrides?: { subtitleTemplate?: string };
+            }
+          )?.taskLevelOverrides?.subtitleTemplate,
+          "高对比模板",
+        );
+        assert.equal(
+          (
+            fake.taskRows[0]?.presetSnapshot as {
+              defaults?: { subtitleTemplate?: string };
+            }
+          )?.defaults?.subtitleTemplate,
+          "科普模板",
+        );
+      });
+    },
+  );
+});
+
+test("manual preset reuse applies the selected preset without pretending it was an automatic match", async () => {
+  const fake = createFakeDb();
+
+  setTaskIntakeTestHooks({
+    findChannelPresetForSourceImpl: async () => null,
+    getChannelPresetByIdForUserImpl: async (_ownerUserId, presetId) =>
+      presetId === "preset_reuse"
+        ? {
+            id: "preset_reuse",
+            sourceIdentifier: "youtube:ReusablePreset",
+            displayName: "复用科普模板",
+            summary: "英译中字幕 / 科普模板 / mp4 + srt",
+            defaults: {
+              translationMode: "英译中字幕",
+              subtitleTemplate: "科普模板",
+              outputPackage: "mp4 + srt",
+            },
+            notes: null,
+            createdAt: "2026-05-27T00:00:00.000Z",
+            updatedAt: "2026-05-27T00:00:00.000Z",
+          }
+        : null,
+  });
+
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_manual_reuse",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        const preview = await handleTaskIntakeAction(
+          42,
+          makeUrlEncodedRequest({
+            intent: "preview_youtube",
+            sourceUrl: "https://www.youtube.com/watch?v=abc123&ab_channel=UnknownChannel",
+          }, "req_manual_reuse"),
+        );
+
+        assert.equal(preview.mode, "preview");
+        assert.equal(preview.presetMatch.status, "unresolved");
+
+        const formData = new FormData();
+        formData.set("intent", "confirm_manual_reuse");
+        formData.set("draftToken", preview.draftToken);
+        formData.set("presetId", "preset_reuse");
+        formData.set("subtitleTemplateOverride", "双语模板");
+
+        const created = await confirmTaskCreation(42, formData);
+
+        assert.equal(created.task.presetMatch.status, "manual_reuse");
+        assert.equal(fake.taskRows[0]?.presetId, "preset_reuse");
+        assert.equal(
+          (fake.taskRows[0]?.presetSnapshot as { status?: string })?.status,
+          "manual_reuse",
+        );
+        assert.deepEqual(fake.taskRows[0]?.processingBaselineSnapshot, {
+          translationMode: "英译中字幕",
+          subtitleTemplate: "双语模板",
+          outputPackage: "mp4 + srt",
+        });
+      });
+    },
+  );
+});
+
+test("manual preset creation can apply a task-level subtitle override while keeping the new preset default intact", async () => {
+  const fake = createFakeDb();
+
+  setChannelPresetTestHooks({
+    findRowBySourceImpl: async () => null,
+    insertRowImpl: async (_ownerUserId, input) => ({
+      id: "preset_new",
+      ownerUserId: 42,
+      sourceIdentifier: String(input.sourceIdentifier),
+      displayName: String(input.displayName),
+      translationMode: String(input.translationMode),
+      subtitleTemplate: String(input.subtitleTemplate),
+      outputPackage: String(input.outputPackage),
+      notes: input.notes ?? null,
+      metadata: {},
+      createdAt: new Date("2026-06-02T00:00:00.000Z"),
+      updatedAt: new Date("2026-06-02T00:00:00.000Z"),
+    }),
+  });
+
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_manual_create_override",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        const preview = await handleTaskIntakeAction(
+          42,
+          makeUrlEncodedRequest({
+            intent: "preview_youtube",
+            sourceUrl: "https://www.youtube.com/watch?v=abc123&ab_channel=UnknownChannel",
+          }, "req_manual_create_override"),
+        );
+
+        assert.equal(preview.presetMatch.status, "unresolved");
+
+        const formData = new FormData();
+        formData.set("intent", "confirm_manual_create");
+        formData.set("draftToken", preview.draftToken);
+        formData.set("displayName", "Unknown Channel");
+        formData.set("translationMode", "英译中字幕");
+        formData.set("subtitleTemplate", "科普模板");
+        formData.set("outputPackage", "mp4 + srt");
+        formData.set("subtitleTemplateOverride", "高对比模板");
+
+        const created = await confirmTaskCreation(42, formData);
+
+        assert.equal(created.task.presetMatch.status, "manual_create");
+        assert.equal(fake.taskRows[0]?.presetId, "preset_new");
+        assert.deepEqual(fake.taskRows[0]?.processingBaselineSnapshot, {
+          translationMode: "英译中字幕",
+          subtitleTemplate: "高对比模板",
+          outputPackage: "mp4 + srt",
+        });
+        assert.equal(
+          (
+            fake.taskRows[0]?.presetSnapshot as {
+              defaults?: { subtitleTemplate?: string };
+            }
+          )?.defaults?.subtitleTemplate,
+          "科普模板",
+        );
+      });
+    },
+  );
+});
+
+test("manual preset creation keeps the draft context when validation fails", async () => {
+  const fake = createFakeDb();
+
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_manual_create_invalid",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        const preview = await handleTaskIntakeAction(
+          42,
+          makeUrlEncodedRequest({
+            intent: "preview_youtube",
+            sourceUrl: "https://www.youtube.com/watch?v=abc123&ab_channel=UnknownChannel",
+          }, "req_manual_create_invalid"),
+        );
+
+        assert.equal(preview.presetMatch.status, "unresolved");
+
+        const formData = new FormData();
+        formData.set("intent", "confirm_manual_create");
+        formData.set("draftToken", preview.draftToken);
+        formData.set("displayName", "");
+        formData.set("translationMode", "英译中字幕");
+        formData.set("subtitleTemplate", "科普模板");
+        formData.set("outputPackage", "mp4 + srt");
+
+        await assert.rejects(confirmTaskCreation(42, formData), (error: any) => {
+          assert.equal(error.constructor?.name, "DataWithResponseInit");
+          assert.equal(error.data.code, "manual_resolution_invalid");
+          assert.equal(error.data.field, "displayName");
+          return true;
+        });
+
+        assert.equal(fake.draftRows.size, 1);
+        assert.equal(fake.taskRows.length, 0);
+      });
+    },
+  );
+});
+
+test("invalid task-level subtitle template override keeps the preview draft available", async () => {
+  const fake = createFakeDb();
+
+  setTaskIntakeTestHooks({
+    findChannelPresetForSourceImpl: async () => ({
+      id: "preset_kurz",
+      sourceIdentifier: "youtube:KurzgesagtCN",
+      displayName: "Kurzgesagt 中文频道",
+      summary: "英译中字幕 / 科普模板 / mp4 + srt",
+      defaults: {
+        translationMode: "英译中字幕",
+        subtitleTemplate: "科普模板",
+        outputPackage: "mp4 + srt",
+      },
+      notes: null,
+      createdAt: "2026-05-27T00:00:00.000Z",
+      updatedAt: "2026-05-27T00:00:00.000Z",
+    }),
+  });
+
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_invalid_subtitle_override",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        const preview = await handleTaskIntakeAction(
+          42,
+          makeUrlEncodedRequest({
+            intent: "preview_youtube",
+            sourceUrl: "https://www.youtube.com/watch?v=abc123&ab_channel=KurzgesagtCN",
+          }, "req_invalid_subtitle_override"),
+        );
+
+        const formData = new FormData();
+        formData.set("intent", "confirm");
+        formData.set("draftToken", preview.draftToken);
+        formData.set("subtitleTemplateOverride", "不存在的模板");
+
+        await assert.rejects(confirmTaskCreation(42, formData), (error: any) => {
+          assert.equal(error.constructor?.name, "DataWithResponseInit");
+          assert.equal(error.data.code, "manual_resolution_invalid");
+          assert.equal(error.data.field, "subtitleTemplateOverride");
+          return true;
+        });
+
+        assert.equal(fake.draftRows.size, 1);
+        assert.equal(fake.taskRows.length, 0);
       });
     },
   );

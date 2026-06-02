@@ -4,6 +4,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
+import { subtitleTemplateOverrideOptions } from "../../features/tasks/task-intake.shared";
+
 type TaskPreviewPayload = {
   ok: true;
   mode: "preview";
@@ -48,6 +50,7 @@ type TaskPresetMatch =
       presetId: string;
       displayName: string;
       sourceIdentifier: string;
+      appliedPresetSourceIdentifier: string;
       summary: string;
       defaults: {
         translationMode: string;
@@ -56,7 +59,38 @@ type TaskPresetMatch =
       };
     }
   | {
-      status: "none";
+      status: "unresolved";
+      sourceIdentifier: string;
+      summary: string;
+    }
+  | {
+      status: "manual_reuse";
+      presetId: string;
+      displayName: string;
+      sourceIdentifier: string;
+      appliedPresetSourceIdentifier: string;
+      summary: string;
+      defaults: {
+        translationMode: string;
+        subtitleTemplate: string;
+        outputPackage: string;
+      };
+    }
+  | {
+      status: "manual_create";
+      presetId: string;
+      displayName: string;
+      sourceIdentifier: string;
+      appliedPresetSourceIdentifier: string;
+      summary: string;
+      defaults: {
+        translationMode: string;
+        subtitleTemplate: string;
+        outputPackage: string;
+      };
+    }
+  | {
+      status: "continue_without_preset";
       sourceIdentifier: string;
       summary: string;
     };
@@ -69,6 +103,13 @@ type TaskErrorPayload = {
   retryable?: boolean;
   request_id: string;
 };
+
+type WorkspaceFetcherData =
+  | TaskPreviewPayload
+  | TaskCreatedPayload
+  | TaskErrorPayload
+  | null
+  | undefined;
 
 type WorkspaceShellProps = {
   runtime: string;
@@ -89,6 +130,12 @@ type WorkspaceShellProps = {
     body: string;
   }>;
   actionData: TaskPreviewPayload | TaskCreatedPayload | TaskErrorPayload | null;
+  channelPresets: Array<{
+    id: string;
+    displayName: string;
+    sourceIdentifier: string;
+    summary: string;
+  }>;
   presetPanel: React.ReactNode;
   taskListPanel: React.ReactNode;
   taskDetailPanel: React.ReactNode;
@@ -107,6 +154,89 @@ function formatSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function getPreviewPresetHeading(presetMatch: TaskPresetMatch) {
+  if (
+    presetMatch.status === "matched" ||
+    presetMatch.status === "manual_reuse" ||
+    presetMatch.status === "manual_create"
+  ) {
+    return presetMatch.displayName;
+  }
+
+  if (presetMatch.status === "continue_without_preset") {
+    return "未保存预设继续";
+  }
+
+  return "未命中频道预设";
+}
+
+function getPreviewPresetStatusLabel(presetMatch: TaskPresetMatch) {
+  switch (presetMatch.status) {
+    case "matched":
+      return "命中已有预设";
+    case "manual_reuse":
+      return "手动复用已有预设";
+    case "manual_create":
+      return "新建最小预设后继续";
+    case "continue_without_preset":
+      return "未保存预设继续";
+    case "unresolved":
+      return "等待人工决策";
+  }
+}
+
+function getCreatedPresetSummary(presetMatch: TaskPresetMatch) {
+  switch (presetMatch.status) {
+    case "matched":
+      return `命中预设: ${presetMatch.displayName}`;
+    case "manual_reuse":
+      return `手动复用预设: ${presetMatch.displayName}`;
+    case "manual_create":
+      return `新建预设后继续: ${presetMatch.displayName}`;
+    case "continue_without_preset":
+      return "未保存预设继续";
+    case "unresolved":
+      return "仍待预设决策";
+  }
+}
+
+function isTaskPreviewPayload(value: WorkspaceFetcherData): value is TaskPreviewPayload {
+  return Boolean(value && value.ok && value.mode === "preview");
+}
+
+export function resolveWorkspacePreview({
+  actionData,
+  youtubeData,
+  uploadData,
+  confirmData,
+}: {
+  actionData: WorkspaceFetcherData;
+  youtubeData: WorkspaceFetcherData;
+  uploadData: WorkspaceFetcherData;
+  confirmData: WorkspaceFetcherData;
+}) {
+  if (
+    (confirmData && confirmData.ok && confirmData.mode === "created") ||
+    (actionData && actionData.ok && actionData.mode === "created")
+  ) {
+    return null;
+  }
+
+  if (isTaskPreviewPayload(youtubeData)) {
+    return youtubeData;
+  }
+
+  if (isTaskPreviewPayload(uploadData)) {
+    return uploadData;
+  }
+
+  if (isTaskPreviewPayload(actionData)) {
+    return actionData;
+  }
+
+  return null;
+}
+
 export function WorkspaceShell({
   runtime,
   serviceName,
@@ -116,6 +246,7 @@ export function WorkspaceShell({
   navigation,
   panels,
   actionData,
+  channelPresets,
   presetPanel,
   taskListPanel,
   taskDetailPanel,
@@ -140,18 +271,12 @@ export function WorkspaceShell({
         ? actionData
         : null;
 
-  const preview =
-    created
-      ? null
-      : confirmFetcher.data && confirmFetcher.data.ok === false
-        ? null
-        : youtubeFetcher.data && youtubeFetcher.data.ok
-          ? youtubeFetcher.data
-          : uploadFetcher.data && uploadFetcher.data.ok
-            ? uploadFetcher.data
-            : actionData && actionData.ok && actionData.mode === "preview"
-              ? actionData
-              : null;
+  const preview = resolveWorkspacePreview({
+    actionData,
+    youtubeData: youtubeFetcher.data,
+    uploadData: uploadFetcher.data,
+    confirmData: confirmFetcher.data,
+  });
 
   const errors = [
     youtubeFetcher.data && youtubeFetcher.data.ok === false ? youtubeFetcher.data : null,
@@ -342,19 +467,11 @@ export function WorkspaceShell({
 
                 <section className="ledger-card">
                   <p className="eyebrow">Preset Match</p>
-                  <h3>
-                    {preview.presetMatch.status === "matched"
-                      ? preview.presetMatch.displayName
-                      : "未命中频道预设"}
-                  </h3>
+                  <h3>{getPreviewPresetHeading(preview.presetMatch)}</h3>
                   <dl className="ledger-list">
                     <div>
                       <dt>匹配状态</dt>
-                      <dd>
-                        {preview.presetMatch.status === "matched"
-                          ? "命中已有预设"
-                          : "使用默认基线"}
-                      </dd>
+                      <dd>{getPreviewPresetStatusLabel(preview.presetMatch)}</dd>
                     </div>
                     <div>
                       <dt>来源标识</dt>
@@ -369,20 +486,200 @@ export function WorkspaceShell({
 
               </div>
 
-              <confirmFetcher.Form method="post" className="confirm-card">
-                <input type="hidden" name="intent" value="confirm" />
-                <input type="hidden" name="draftToken" value={preview.draftToken} />
-                <div>
-                  <p className="eyebrow">Confirmation</p>
-                  <h3>正式写入任务记录</h3>
-                  <p className="intake-copy">
-                    本次确认会创建真实 `tasks` 记录，并进入后续 story 可继续消费的初始状态。
-                  </p>
-                </div>
-                <button className="primary-action" type="submit">
-                  {confirmFetcher.state !== "idle" ? "正在提交..." : "确认并创建任务"}
-                </button>
-              </confirmFetcher.Form>
+              {preview.presetMatch.status === "matched" ? (
+                <confirmFetcher.Form method="post" className="confirm-card">
+                  <input type="hidden" name="intent" value="confirm" />
+                  <input type="hidden" name="draftToken" value={preview.draftToken} />
+                  <div>
+                    <p className="eyebrow">Confirmation</p>
+                    <h3>正式写入任务记录</h3>
+                    <p className="intake-copy">
+                      本次确认会创建真实 `tasks` 记录，并进入后续 story 可继续消费的初始状态。
+                    </p>
+                    <label className="field-label">
+                      任务级字幕模板覆盖
+                      <select className="text-input" name="subtitleTemplateOverride" defaultValue="">
+                        <option value="">沿用当前默认模板：{preview.baseline.subtitleTemplate}</option>
+                        {subtitleTemplateOverrideOptions.map((template) => (
+                          <option key={template} value={template}>
+                            {template}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="field-hint">
+                        只影响当前任务，不会修改底层频道预设。
+                      </span>
+                      {activeError?.field === "subtitleTemplateOverride" ? (
+                        <span className="field-error">{activeError.message}</span>
+                      ) : null}
+                    </label>
+                  </div>
+                  <button className="primary-action" type="submit">
+                    {confirmFetcher.state !== "idle" ? "正在提交..." : "确认并创建任务"}
+                  </button>
+                </confirmFetcher.Form>
+              ) : (
+                <section className="decision-stack">
+                  <div className="inline-feedback inline-feedback-info">
+                    <p className="feedback-title">Unknown Source Resolution</p>
+                    <h3>当前来源未命中现有预设</h3>
+                    <p>
+                      这是一次轻量决策。你可以复用已有预设、为当前来源创建最小预设，或不保存预设直接继续当前任务。
+                    </p>
+                  </div>
+
+                  <div className="decision-grid">
+                    <confirmFetcher.Form method="post" className="decision-card">
+                      <input type="hidden" name="intent" value="confirm_manual_reuse" />
+                      <input type="hidden" name="draftToken" value={preview.draftToken} />
+                      <div>
+                        <p className="eyebrow">Reuse Existing</p>
+                        <h3>复用已有预设</h3>
+                        <p className="intake-copy">
+                          适合当前来源与已有频道规则足够接近的场景。
+                        </p>
+                      </div>
+                      <label className="field-label">
+                        选择预设
+                        <select
+                          className="text-input"
+                          name="presetId"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>
+                            请选择一个可复用的频道预设
+                          </option>
+                          {channelPresets.map((preset) => (
+                            <option key={preset.id} value={preset.id}>
+                              {preset.displayName} · {preset.summary}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {activeError?.field === "presetId" ? (
+                        <p className="field-error">{activeError.message}</p>
+                      ) : null}
+                      <label className="field-label">
+                        任务级字幕模板覆盖
+                        <select
+                          className="text-input"
+                          name="subtitleTemplateOverride"
+                          defaultValue=""
+                        >
+                          <option value="">沿用所选预设默认模板</option>
+                          {subtitleTemplateOverrideOptions.map((template) => (
+                            <option key={template} value={template}>
+                              {template}
+                            </option>
+                          ))}
+                        </select>
+                        {activeError?.field === "subtitleTemplateOverride" ? (
+                          <span className="field-error">{activeError.message}</span>
+                        ) : null}
+                      </label>
+                      <button
+                        className="secondary-action"
+                        type="submit"
+                        disabled={channelPresets.length === 0}
+                      >
+                        {confirmFetcher.state !== "idle" ? "正在应用..." : "复用后继续"}
+                      </button>
+                      {channelPresets.length === 0 ? (
+                        <p className="field-hint">当前还没有可复用的频道预设。</p>
+                      ) : null}
+                    </confirmFetcher.Form>
+
+                    <confirmFetcher.Form method="post" className="decision-card decision-card-wide">
+                      <input type="hidden" name="intent" value="confirm_manual_create" />
+                      <input type="hidden" name="draftToken" value={preview.draftToken} />
+                      <div>
+                        <p className="eyebrow">Create Minimal Preset</p>
+                        <h3>创建最小预设后继续</h3>
+                        <p className="intake-copy">
+                          只填写当前任务真正需要的最小字段，不离开工作台，不进入复杂后台。
+                        </p>
+                      </div>
+                      <div className="decision-form-grid">
+                        <label className="field-label">
+                          预设名称
+                          <input className="text-input" name="displayName" type="text" />
+                          {activeError?.field === "displayName" ? (
+                            <span className="field-error">{activeError.message}</span>
+                          ) : null}
+                        </label>
+                        <label className="field-label">
+                          默认翻译方向
+                          <input className="text-input" name="translationMode" type="text" />
+                          {activeError?.field === "translationMode" ? (
+                            <span className="field-error">{activeError.message}</span>
+                          ) : null}
+                        </label>
+                        <label className="field-label">
+                          默认字幕模板
+                          <input className="text-input" name="subtitleTemplate" type="text" />
+                          {activeError?.field === "subtitleTemplate" ? (
+                            <span className="field-error">{activeError.message}</span>
+                          ) : null}
+                        </label>
+                        <label className="field-label">
+                          默认输出偏好
+                          <input className="text-input" name="outputPackage" type="text" />
+                          {activeError?.field === "outputPackage" ? (
+                            <span className="field-error">{activeError.message}</span>
+                          ) : null}
+                        </label>
+                      </div>
+                      <label className="field-label">
+                        备注
+                        <textarea className="text-input preset-notes-input" name="notes" rows={3} />
+                        {activeError?.field === "notes" ? (
+                          <span className="field-error">{activeError.message}</span>
+                        ) : null}
+                      </label>
+                      <label className="field-label">
+                        任务级字幕模板覆盖
+                        <select
+                          className="text-input"
+                          name="subtitleTemplateOverride"
+                          defaultValue=""
+                        >
+                          <option value="">沿用新建预设中的默认模板</option>
+                          {subtitleTemplateOverrideOptions.map((template) => (
+                            <option key={template} value={template}>
+                              {template}
+                            </option>
+                          ))}
+                        </select>
+                        {activeError?.field === "subtitleTemplateOverride" ? (
+                          <span className="field-error">{activeError.message}</span>
+                        ) : null}
+                      </label>
+                      <button className="primary-action" type="submit">
+                        {confirmFetcher.state !== "idle" ? "正在创建..." : "创建预设并继续"}
+                      </button>
+                    </confirmFetcher.Form>
+
+                    <confirmFetcher.Form method="post" className="decision-card">
+                      <input
+                        type="hidden"
+                        name="intent"
+                        value="confirm_continue_without_preset"
+                      />
+                      <input type="hidden" name="draftToken" value={preview.draftToken} />
+                      <div>
+                        <p className="eyebrow">Continue Once</p>
+                        <h3>不保存预设直接继续</h3>
+                        <p className="intake-copy">
+                          适合一次性任务。系统会继续使用当前默认处理基线，但不会沉淀新的频道资产。
+                        </p>
+                      </div>
+                      <button className="secondary-action" type="submit">
+                        {confirmFetcher.state !== "idle" ? "正在提交..." : "直接继续当前任务"}
+                      </button>
+                    </confirmFetcher.Form>
+                  </div>
+                </section>
+              )}
             </section>
           ) : null}
 
@@ -395,11 +692,7 @@ export function WorkspaceShell({
               </p>
               <div className="feedback-meta">
                 <span>{created.task.baselineSummary}</span>
-                <span>
-                  {created.task.presetMatch.status === "matched"
-                    ? `命中预设: ${created.task.presetMatch.displayName}`
-                    : "未使用预设"}
-                </span>
+                <span>{getCreatedPresetSummary(created.task.presetMatch)}</span>
                 <span>request_id: {created.requestId}</span>
               </div>
             </section>
@@ -439,8 +732,8 @@ export function WorkspaceShell({
         <article className="shell-panel">
           <p className="eyebrow">Current Scope</p>
           <ul className="shell-list">
-            <li>已完成：登录入口、SSO 回调、本地会话、最小 RBAC、任务导入预览与真实任务写入。</li>
-            <li>待接入：预设命中、review 队列、实时同步、交付访问。</li>
+            <li>已完成：登录入口、SSO 回调、本地会话、最小 RBAC、任务导入预览、预设命中、未知来源人工决策与任务级模板覆盖。</li>
+            <li>待接入：低置信度 review 队列、实时同步、交付访问与运营侧可视化。</li>
             <li>公开路由保留：`/health` 与 `/login`。</li>
           </ul>
         </article>

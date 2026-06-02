@@ -24,6 +24,23 @@ const maxPageSize = 20;
 
 type TaskSourceSnapshot = {
   title?: string;
+  taskLevelOverrides?: {
+    subtitleTemplate?: string;
+  };
+};
+
+type TaskBaselineSnapshot = {
+  translationMode?: string;
+  subtitleTemplate?: string;
+  outputPackage?: string;
+};
+
+type TaskPresetSnapshot = {
+  status?: string;
+  displayName?: string;
+  summary?: string;
+  sourceIdentifier?: string;
+  appliedPresetSourceIdentifier?: string;
 };
 
 type TaskRecord = {
@@ -33,6 +50,7 @@ type TaskRecord = {
   sourceIdentifier: string;
   sourceSnapshot: Record<string, unknown> | null;
   processingBaselineSnapshot: Record<string, unknown> | null;
+  presetSnapshot: Record<string, unknown> | null;
   status: TaskStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -101,6 +119,11 @@ export type TaskDetailView = {
   status: TaskStatus;
   statusLabel: string;
   statusTone: TaskStatusTone;
+  presetContextLabel: string;
+  presetContextSummary: string;
+  baselineSummary: string;
+  subtitleTemplateContextLabel: string;
+  subtitleTemplateContextSummary: string;
   currentStageLabel: string;
   latestProgressLabel: string;
   requestId: string | null;
@@ -226,6 +249,98 @@ function getSourceTitle(
   const snapshot = sourceSnapshot as TaskSourceSnapshot | null;
 
   return snapshot?.title ?? sourceIdentifier;
+}
+
+function getBaselineSummary(
+  baselineSnapshot: Record<string, unknown> | null,
+) {
+  const snapshot = baselineSnapshot as TaskBaselineSnapshot | null;
+
+  return [
+    snapshot?.translationMode ?? "未设置翻译方向",
+    snapshot?.subtitleTemplate ?? "未设置字幕模板",
+    snapshot?.outputPackage ?? "未设置输出偏好",
+  ].join(" / ");
+}
+
+function getPresetContext(
+  presetSnapshot: Record<string, unknown> | null,
+  baselineSnapshot: Record<string, unknown> | null,
+) {
+  const snapshot = presetSnapshot as TaskPresetSnapshot | null;
+  const fallbackBaseline = getBaselineSummary(baselineSnapshot);
+
+  switch (snapshot?.status) {
+    case "matched":
+      return {
+        label: "自动命中已有预设",
+        summary: snapshot.summary ?? fallbackBaseline,
+      };
+    case "manual_reuse":
+      return {
+        label: "手动复用已有预设",
+        summary: snapshot.summary ?? fallbackBaseline,
+      };
+    case "manual_create":
+      return {
+        label: "新建最小预设后继续",
+        summary: snapshot.summary ?? fallbackBaseline,
+      };
+    case "continue_without_preset":
+      return {
+        label: "未保存预设继续",
+        summary: snapshot.summary ?? `继续使用默认处理基线：${fallbackBaseline}`,
+      };
+    case "unresolved":
+      return {
+        label: "仍待预设决策",
+        summary: snapshot.summary ?? "当前任务仍未完成预设决策。",
+      };
+    case "none":
+    default:
+      return {
+        label: "未使用预设",
+        summary: snapshot?.summary ?? `继续使用默认处理基线：${fallbackBaseline}`,
+      };
+  }
+}
+
+function getSubtitleTemplateContext(
+  sourceSnapshot: Record<string, unknown> | null,
+  presetSnapshot: Record<string, unknown> | null,
+  baselineSnapshot: Record<string, unknown> | null,
+) {
+  const source = sourceSnapshot as TaskSourceSnapshot | null;
+  const preset = presetSnapshot as (TaskPresetSnapshot & {
+    defaults?: {
+      subtitleTemplate?: string;
+    };
+  }) | null;
+  const baseline = baselineSnapshot as TaskBaselineSnapshot | null;
+  const overrideTemplate = source?.taskLevelOverrides?.subtitleTemplate;
+  const finalTemplate = baseline?.subtitleTemplate ?? "未设置字幕模板";
+  const presetTemplate = preset?.defaults?.subtitleTemplate;
+
+  if (overrideTemplate) {
+    return {
+      label: "任务级字幕模板覆盖",
+      summary: presetTemplate
+        ? `当前任务覆盖为「${overrideTemplate}」，底层预设默认模板仍为「${presetTemplate}」。`
+        : `当前任务字幕模板覆盖为「${overrideTemplate}」。`,
+    };
+  }
+
+  if (presetTemplate) {
+    return {
+      label: "沿用预设默认模板",
+      summary: `当前任务沿用预设默认模板「${presetTemplate}」。`,
+    };
+  }
+
+  return {
+    label: "使用当前处理基线",
+    summary: `当前任务使用处理基线中的字幕模板「${finalTemplate}」。`,
+  };
 }
 
 function getEventCopy(eventType: string | null, status: TaskStatus) {
@@ -440,6 +555,7 @@ async function listTaskPageRowsForUser(
       sourceIdentifier: tasks.sourceIdentifier,
       sourceSnapshot: tasks.sourceSnapshot,
       processingBaselineSnapshot: tasks.processingBaselineSnapshot,
+      presetSnapshot: tasks.presetSnapshot,
       status: tasks.status,
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,
@@ -466,6 +582,7 @@ async function getTaskRowForUser(
       sourceIdentifier: tasks.sourceIdentifier,
       sourceSnapshot: tasks.sourceSnapshot,
       processingBaselineSnapshot: tasks.processingBaselineSnapshot,
+      presetSnapshot: tasks.presetSnapshot,
       status: tasks.status,
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,
@@ -487,6 +604,7 @@ async function getTaskRowById(taskId: string): Promise<TaskRecord | null> {
       sourceIdentifier: tasks.sourceIdentifier,
       sourceSnapshot: tasks.sourceSnapshot,
       processingBaselineSnapshot: tasks.processingBaselineSnapshot,
+      presetSnapshot: tasks.presetSnapshot,
       status: tasks.status,
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,
@@ -623,6 +741,15 @@ export async function getTaskDetailForUser(
     ownedTask.status,
   );
   const resultStatus = getResultStatus(ownedTask.status, deliverables);
+  const presetContext = getPresetContext(
+    ownedTask.presetSnapshot,
+    ownedTask.processingBaselineSnapshot,
+  );
+  const subtitleTemplateContext = getSubtitleTemplateContext(
+    ownedTask.sourceSnapshot,
+    ownedTask.presetSnapshot,
+    ownedTask.processingBaselineSnapshot,
+  );
 
   return {
     id: ownedTask.id,
@@ -634,6 +761,11 @@ export async function getTaskDetailForUser(
     status: ownedTask.status,
     statusLabel: statusPresentation.label,
     statusTone: statusPresentation.tone,
+    presetContextLabel: presetContext.label,
+    presetContextSummary: presetContext.summary,
+    baselineSummary: getBaselineSummary(ownedTask.processingBaselineSnapshot),
+    subtitleTemplateContextLabel: subtitleTemplateContext.label,
+    subtitleTemplateContextSummary: subtitleTemplateContext.summary,
     currentStageLabel: getTaskCurrentStageLabel(ownedTask.status, {
       lastActiveStatus: latestEvent?.fromStatus ?? null,
     }),

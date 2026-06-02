@@ -37,6 +37,7 @@ export function CreatorWorkspaceScreen({
       navigation={loaderData.navigation}
       panels={loaderData.panels}
       actionData={taskActionData}
+      channelPresets={loaderData.channelPresets}
       presetPanel={<ChannelPresetWorkbench presets={loaderData.channelPresets} />}
       taskListPanel={
         <TaskSyncBridge taskId={loaderData.selectedTask?.id ?? null}>
