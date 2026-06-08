@@ -18,6 +18,16 @@ import {
   type TaskStatus,
   type TaskStatusTone,
 } from "./task-status.server";
+import {
+  buildSupportDiagnosticEntries,
+  extractFailureContext,
+  extractReviewQueue,
+  getTaskAttemptSnapshot,
+  type TaskAttemptSnapshot,
+  type TaskFailureContext,
+  type TaskReviewQueue,
+  type TaskSupportDiagnosticEntry,
+} from "./task-diagnostics.server";
 
 const defaultPageSize = 10;
 const maxPageSize = 20;
@@ -112,6 +122,15 @@ export type TaskTimelineEventView = {
   reasonCode: string | null;
 };
 
+export type TaskSupportDiagnosticsView = {
+  accessLabel: string;
+  lookupTaskId: string;
+  originTaskId: string;
+  attemptNumber: number;
+  presetResolution: string;
+  entries: TaskSupportDiagnosticEntry[];
+};
+
 export type TaskDetailView = {
   id: string;
   sourceIdentifier: string;
@@ -135,6 +154,11 @@ export type TaskDetailView = {
     description: string;
     tone: "neutral" | "info" | "warning" | "danger" | "success";
   };
+  accessMode: "creator" | "support";
+  attempt: TaskAttemptSnapshot;
+  reviewQueue: TaskReviewQueue | null;
+  failureContext: TaskFailureContext | null;
+  supportDiagnostics: TaskSupportDiagnosticsView | null;
   deliverables: DeliverableView[];
   stages: TaskStageView[];
   events: TaskTimelineEventView[];
@@ -175,6 +199,14 @@ const taskEventLabels: Record<
     label: "已进入人工复核队列",
     description: "系统已识别到需要人工确认的片段。",
   },
+  "task.review_required": {
+    label: "低置信度片段待确认",
+    description: "当前任务进入待人工确认的 review 队列。",
+  },
+  "task.review_resolved": {
+    label: "人工确认已提交",
+    description: "创作者已提交 review 决策，任务可以继续推进。",
+  },
   "task.failed": {
     label: "处理失败",
     description: "任务进入失败终态，需要结合追踪信息排查。",
@@ -194,6 +226,14 @@ const taskEventLabels: Record<
   "task.recovered": {
     label: "任务已恢复",
     description: "任务已从异常中恢复并继续推进。",
+  },
+  "task.retry_requested": {
+    label: "请求创建恢复 attempt",
+    description: "系统已记录一次新的恢复尝试请求。",
+  },
+  "task.retry_spawned": {
+    label: "新的恢复 attempt 已创建",
+    description: "系统已创建新的执行实例，并继续排队处理。",
   },
 };
 
@@ -641,6 +681,26 @@ async function getTaskEventLedger(taskId: string): Promise<TaskEventRecord[]> {
   }));
 }
 
+function buildSupportDiagnostics(
+  task: TaskRecord,
+  events: TaskEventRecord[],
+): TaskSupportDiagnosticsView {
+  const presetSnapshot = task.presetSnapshot as TaskPresetSnapshot | null;
+  const attempt = getTaskAttemptSnapshot(task.sourceSnapshot, task.id);
+
+  return {
+    accessLabel: "Support Diagnostic View",
+    lookupTaskId: task.id,
+    originTaskId: attempt.originTaskId,
+    attemptNumber: attempt.attemptNumber,
+    presetResolution:
+      typeof presetSnapshot?.status === "string" && presetSnapshot.status
+        ? presetSnapshot.status
+        : "unknown",
+    entries: buildSupportDiagnosticEntries(events),
+  };
+}
+
 async function getLatestTaskEventForTask(
   taskId: string,
 ): Promise<TaskEventRecord | null> {
@@ -750,6 +810,9 @@ export async function getTaskDetailForUser(
     ownedTask.presetSnapshot,
     ownedTask.processingBaselineSnapshot,
   );
+  const attempt = getTaskAttemptSnapshot(ownedTask.sourceSnapshot, ownedTask.id);
+  const reviewQueue = extractReviewQueue(events);
+  const failureContext = extractFailureContext(events);
 
   return {
     id: ownedTask.id,
@@ -775,12 +838,87 @@ export async function getTaskDetailForUser(
     updatedAt: ownedTask.updatedAt.toISOString(),
     nextStepLabel: getNextStepLabel(ownedTask.status),
     resultStatus,
+    accessMode: "creator",
+    attempt,
+    reviewQueue:
+      ownedTask.status === "awaiting_human_review" ? reviewQueue : null,
+    failureContext:
+      ownedTask.status === "failed" || ownedTask.status === "cancelled"
+        ? failureContext
+        : null,
+    supportDiagnostics: null,
     deliverables,
     stages: buildTaskStageTimeline(ownedTask.status, {
       lastActiveStatus: latestEvent?.fromStatus ?? null,
     }),
     events: events.map((event, index) =>
       mapTaskTimelineEvent(event, index, events.length, ownedTask.status),
+    ),
+  };
+}
+
+export async function getTaskDetailForSupport(taskId: string): Promise<TaskDetailView> {
+  const task = await taskQueryTestHooks.getTaskRowByIdImpl(taskId);
+
+  if (!task) {
+    createTaskReadError("task_not_found", "任务不存在，或当前链接已经失效。", 404);
+  }
+
+  const events = await taskQueryTestHooks.getTaskEventLedgerImpl(taskId);
+  const latestEvent =
+    events.at(-1) ??
+    (await taskQueryTestHooks.getLatestTaskEventForTaskImpl(taskId));
+  const statusPresentation = getTaskStatusPresentation(task.status);
+  const latestCopy = getEventCopy(latestEvent?.eventType ?? null, task.status);
+  const presetContext = getPresetContext(
+    task.presetSnapshot,
+    task.processingBaselineSnapshot,
+  );
+  const subtitleTemplateContext = getSubtitleTemplateContext(
+    task.sourceSnapshot,
+    task.presetSnapshot,
+    task.processingBaselineSnapshot,
+  );
+  const attempt = getTaskAttemptSnapshot(task.sourceSnapshot, task.id);
+  const reviewQueue = extractReviewQueue(events);
+  const failureContext = extractFailureContext(events);
+
+  return {
+    id: task.id,
+    sourceIdentifier: task.sourceIdentifier,
+    sourceTitle: getSourceTitle(task.sourceSnapshot, task.sourceIdentifier),
+    status: task.status,
+    statusLabel: statusPresentation.label,
+    statusTone: statusPresentation.tone,
+    presetContextLabel: presetContext.label,
+    presetContextSummary: presetContext.summary,
+    baselineSummary: getBaselineSummary(task.processingBaselineSnapshot),
+    subtitleTemplateContextLabel: subtitleTemplateContext.label,
+    subtitleTemplateContextSummary: subtitleTemplateContext.summary,
+    currentStageLabel: getTaskCurrentStageLabel(task.status, {
+      lastActiveStatus: latestEvent?.fromStatus ?? null,
+    }),
+    latestProgressLabel: latestCopy.label,
+    requestId: latestEvent?.requestId ?? null,
+    createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
+    nextStepLabel: getNextStepLabel(task.status),
+    resultStatus: {
+      label: "诊断视图",
+      description: "当前视图仅用于支持排障，不提供交付物访问入口。",
+      tone: "neutral",
+    },
+    accessMode: "support",
+    attempt,
+    reviewQueue,
+    failureContext,
+    supportDiagnostics: buildSupportDiagnostics(task, events),
+    deliverables: [],
+    stages: buildTaskStageTimeline(task.status, {
+      lastActiveStatus: latestEvent?.fromStatus ?? null,
+    }),
+    events: events.map((event, index) =>
+      mapTaskTimelineEvent(event, index, events.length, task.status),
     ),
   };
 }

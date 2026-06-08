@@ -12,7 +12,7 @@ import {
 import { and, desc, eq, lt } from "drizzle-orm";
 
 import { database } from "../../../../database/context";
-import { taskIntakeDrafts, tasks } from "../../../../database/schema";
+import { taskEvents, taskIntakeDrafts, tasks } from "../../../../database/schema";
 import { getRequestContext } from "../../auth/server/request-context.server";
 import {
   createChannelPreset,
@@ -22,12 +22,23 @@ import {
 } from "../../presets/server/channel-presets.server";
 
 import { getDefaultProcessingBaseline } from "./task-baseline.server";
-import { recordTaskCreation } from "./task-events.server";
+import {
+  appendTaskEvent,
+  recordTaskCreation,
+  transitionTaskStatus,
+} from "./task-events.server";
 import { createTaskActionError, type TaskActionError } from "./task-errors.server";
 import { isValidSubtitleTemplateOverride } from "../task-intake.shared";
 import { recognizeSourceFromUpload, recognizeSourceFromYoutubeUrl } from "./source-recognition.server";
 import { initialTaskStatus, type TaskStatus } from "./task-status.server";
 import { deleteStoredUpload, persistUploadedVideo } from "./upload-storage.server";
+import {
+  buildInitialAttemptSnapshot,
+  buildRetryAttemptSnapshot,
+  extractFailureContext,
+  extractReviewQueue,
+  type TaskEventLike,
+} from "./task-diagnostics.server";
 
 const supportedVideoTypes = new Set([
   "video/mp4",
@@ -118,7 +129,29 @@ export type TaskPresetMatch =
 export type TaskIntakeActionResult =
   | TaskPreviewPayload
   | TaskCreatedPayload
+  | TaskReviewSubmittedPayload
+  | TaskRetryCreatedPayload
   | TaskActionError;
+
+export type TaskReviewSubmittedPayload = {
+  ok: true;
+  mode: "review_submitted";
+  requestId: string;
+  taskId: string;
+  resolvedCount: number;
+};
+
+export type TaskRetryCreatedPayload = {
+  ok: true;
+  mode: "retry_created";
+  requestId: string;
+  sourceTaskId: string;
+  task: {
+    id: string;
+    status: TaskStatus;
+    attemptNumber: number;
+  };
+};
 
 type TaskIntakeDraftRecord = {
   intakeMethod: "youtube_link";
@@ -306,7 +339,9 @@ function assertIntent(formData: FormData) {
     intent === "confirm" ||
     intent === "confirm_manual_reuse" ||
     intent === "confirm_manual_create" ||
-    intent === "confirm_continue_without_preset"
+    intent === "confirm_continue_without_preset" ||
+    intent === "submit_review" ||
+    intent === "retry_task"
   ) {
     return intent;
   }
@@ -368,6 +403,57 @@ async function getDraftForUser(
     .limit(1);
 
   return (draft as TaskIntakeDraftRecord | undefined) ?? null;
+}
+
+async function getTaskForUser(
+  userId: number,
+  taskId: string,
+) {
+  const db = database();
+  const [record] = await db
+    .select({
+      id: tasks.id,
+      creatorUserId: tasks.creatorUserId,
+      intakeMethod: tasks.intakeMethod,
+      sourceUrl: tasks.sourceUrl,
+      sourceIdentifier: tasks.sourceIdentifier,
+      sourceSnapshot: tasks.sourceSnapshot,
+      processingBaselineSnapshot: tasks.processingBaselineSnapshot,
+      presetId: tasks.presetId,
+      presetSnapshot: tasks.presetSnapshot,
+      uploadStorageKey: tasks.uploadStorageKey,
+      status: tasks.status,
+      createdAt: tasks.createdAt,
+      updatedAt: tasks.updatedAt,
+    })
+    .from(tasks)
+    .where(and(eq(tasks.id, taskId), eq(tasks.creatorUserId, userId)))
+    .limit(1);
+
+  return record ?? null;
+}
+
+async function getTaskEventLedger(taskId: string): Promise<TaskEventLike[]> {
+  const db = database();
+  const records = await db
+    .select({
+      id: taskEvents.id,
+      eventType: taskEvents.eventType,
+      fromStatus: taskEvents.fromStatus,
+      toStatus: taskEvents.toStatus,
+      reasonCode: taskEvents.reasonCode,
+      requestId: taskEvents.requestId,
+      payload: taskEvents.payload,
+      createdAt: taskEvents.createdAt,
+    })
+    .from(taskEvents)
+    .where(eq(taskEvents.taskId, taskId))
+    .orderBy(desc(taskEvents.createdAt));
+
+  return records.map((record) => ({
+    ...(record as Omit<TaskEventLike, "payload">),
+    payload: (record.payload as Record<string, unknown>) ?? {},
+  }));
 }
 
 async function parseVideoUpload(request: Request) {
@@ -676,6 +762,8 @@ export async function confirmTaskCreation(
   }
 
   await db.transaction(async (tx) => {
+    const attempt = buildInitialAttemptSnapshot(taskId);
+
     await tx.insert(tasks).values({
       id: taskId,
       creatorUserId: userId,
@@ -694,6 +782,7 @@ export async function confirmTaskCreation(
             : {
                 subtitleTemplate: subtitleTemplateOverride,
               },
+        attempt,
         requestId,
       },
       processingBaselineSnapshot: baseline,
@@ -717,6 +806,7 @@ export async function confirmTaskCreation(
       payload: {
         presetResolution: presetMatch.status,
         subtitleTemplateOverride,
+        attemptNumber: attempt.attemptNumber,
       },
       createdAt: now,
       db: tx,
@@ -752,6 +842,235 @@ export async function confirmTaskCreation(
   };
 }
 
+function assertTaskId(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw createTaskActionError(
+      "review_submission_invalid",
+      "当前任务标识缺失，请刷新后重试。",
+      { field: "taskId" },
+    );
+  }
+
+  return value.trim();
+}
+
+async function submitTaskReview(
+  userId: number,
+  formData: FormData,
+): Promise<TaskReviewSubmittedPayload> {
+  const requestId = getRequestContext().requestId;
+  const taskId = assertTaskId(formData.get("taskId"));
+  const task = await getTaskForUser(userId, taskId);
+
+  if (!task) {
+    throw createTaskActionError(
+      "review_submission_invalid",
+      "当前任务不存在，或你没有提交该 review 的权限。",
+      { field: "taskId", status: 404 },
+    );
+  }
+
+  if (task.status !== "awaiting_human_review") {
+    throw createTaskActionError(
+      "review_submission_invalid",
+      "当前任务已经不处于待人工确认状态，请刷新后再试。",
+      { field: "taskId" },
+    );
+  }
+
+  const events = await getTaskEventLedger(taskId);
+  const reviewQueue = extractReviewQueue([...events].reverse());
+
+  if (!reviewQueue || reviewQueue.items.length === 0) {
+    throw createTaskActionError(
+      "review_submission_invalid",
+      "当前任务没有可提交的低置信度片段。",
+      { field: "taskId" },
+    );
+  }
+
+  const resolvedItems = reviewQueue.items.map((item) => {
+    const rawDecision = formData.get(`reviewDecision:${item.id}`);
+    const rawNote = formData.get(`reviewNote:${item.id}`);
+
+    if (rawDecision !== "approve" && rawDecision !== "needs_attention") {
+      throw createTaskActionError(
+        "review_submission_invalid",
+        "请先为每个低置信度片段选择处理决定后再提交。",
+        { field: item.id },
+      );
+    }
+
+    return {
+      itemId: item.id,
+      decision: rawDecision,
+      note: typeof rawNote === "string" && rawNote.trim() ? rawNote.trim() : null,
+    };
+  });
+
+  const now = taskIntakeTestHooks.nowImpl();
+
+  await transitionTaskStatus({
+    taskId,
+    fromStatus: "awaiting_human_review",
+    toStatus: "queued",
+    eventType: "task.review_resolved",
+    requestId,
+    actorUserId: userId,
+    createdAt: now,
+    payload: {
+      reviewId: reviewQueue.reviewId,
+      resolvedItems,
+      pendingCount: 0,
+    },
+  });
+
+  return {
+    ok: true,
+    mode: "review_submitted",
+    requestId,
+    taskId,
+    resolvedCount: resolvedItems.length,
+  };
+}
+
+async function retryTaskWithNewAttempt(
+  userId: number,
+  formData: FormData,
+): Promise<TaskRetryCreatedPayload> {
+  const requestId = getRequestContext().requestId;
+  const taskId = assertTaskId(formData.get("taskId"));
+  const task = await getTaskForUser(userId, taskId);
+
+  if (!task) {
+    throw createTaskActionError(
+      "retry_unavailable",
+      "当前任务不存在，或你没有发起恢复的权限。",
+      { field: "taskId", status: 404 },
+    );
+  }
+
+  if (task.status !== "failed") {
+    throw createTaskActionError(
+      "retry_unavailable",
+      "只有失败任务才能创建新的恢复 attempt。",
+      { field: "taskId" },
+    );
+  }
+
+  const events = await getTaskEventLedger(taskId);
+  const failure = extractFailureContext([...events].reverse());
+
+  if (!failure || !failure.retryable) {
+    throw createTaskActionError(
+      "retry_unavailable",
+      "当前失败场景没有可用的恢复动作。",
+      { field: "taskId" },
+    );
+  }
+
+  const nextTaskId = `task_${randomUUID().replace(/-/g, "")}`;
+  const nextAttempt = buildRetryAttemptSnapshot({
+    sourceSnapshot: (task.sourceSnapshot as Record<string, unknown>) ?? {},
+    currentTaskId: taskId,
+    nextTaskId,
+  });
+  const now = taskIntakeTestHooks.nowImpl();
+  const sourceSnapshot = (task.sourceSnapshot as Record<string, unknown>) ?? {};
+  const presetSnapshot = (task.presetSnapshot as Record<string, unknown>) ?? {};
+  const processingBaselineSnapshot =
+    (task.processingBaselineSnapshot as Record<string, unknown>) ?? {};
+  const db = database();
+
+  await db.transaction(async (tx) => {
+    await appendTaskEvent({
+      taskId,
+      eventType: "task.retry_requested",
+      fromStatus: "failed",
+      toStatus: "failed",
+      reasonCode: failure.reasonCode ?? "retry_requested",
+      requestId,
+      actorUserId: userId,
+      createdAt: now,
+      payload: {
+        sourceTaskId: taskId,
+        diagnosticTraceId: failure.diagnosticTraceId,
+        recommendedAction: failure.recommendedAction,
+      },
+      db: tx,
+    });
+
+    await tx.insert(tasks).values({
+      id: nextTaskId,
+      creatorUserId: userId,
+      intakeMethod: task.intakeMethod,
+      sourceUrl: task.sourceUrl,
+      sourceIdentifier: task.sourceIdentifier,
+      sourceSnapshot: {
+        ...sourceSnapshot,
+        attempt: nextAttempt,
+        recoveredFrom: {
+          taskId,
+          reasonCode: failure.reasonCode,
+          diagnosticTraceId: failure.diagnosticTraceId,
+          stage: failure.stage,
+        },
+        requestId,
+      },
+      processingBaselineSnapshot,
+      presetId: task.presetId,
+      presetSnapshot,
+      uploadStorageKey: task.uploadStorageKey,
+      status: initialTaskStatus,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await recordTaskCreation({
+      taskId: nextTaskId,
+      requestId,
+      actorUserId: userId,
+      payload: {
+        presetResolution:
+          typeof presetSnapshot.status === "string" ? presetSnapshot.status : "unknown",
+        retryOfTaskId: taskId,
+        attemptNumber: nextAttempt.attemptNumber,
+      },
+      createdAt: now,
+      db: tx,
+    });
+
+    await transitionTaskStatus({
+      taskId: nextTaskId,
+      fromStatus: "created",
+      toStatus: "queued",
+      eventType: "task.retry_spawned",
+      requestId,
+      actorUserId: userId,
+      createdAt: now,
+      payload: {
+        sourceTaskId: taskId,
+        originTaskId: nextAttempt.originTaskId,
+        attemptNumber: nextAttempt.attemptNumber,
+        diagnosticTraceId: failure.diagnosticTraceId,
+      },
+      db: tx,
+    });
+  });
+
+  return {
+    ok: true,
+    mode: "retry_created",
+    requestId,
+    sourceTaskId: taskId,
+    task: {
+      id: nextTaskId,
+      status: "queued",
+      attemptNumber: nextAttempt.attemptNumber,
+    },
+  };
+}
+
 export async function handleTaskIntakeAction(
   userId: number,
   request: Request,
@@ -778,6 +1097,14 @@ export async function handleTaskIntakeAction(
   if (intent === "preview_youtube") {
     const sourceUrl = assertYoutubeUrlInput(formData.get("sourceUrl"));
     return createYoutubePreviewDraft(userId, sourceUrl);
+  }
+
+  if (intent === "submit_review") {
+    return submitTaskReview(userId, formData);
+  }
+
+  if (intent === "retry_task") {
+    return retryTaskWithNewAttempt(userId, formData);
   }
 
   return confirmTaskCreation(userId, formData);

@@ -21,11 +21,15 @@ export type TaskEventType =
   | "task.queued"
   | "task.processing"
   | "task.human_review_requested"
+  | "task.review_required"
+  | "task.review_resolved"
   | "task.failed"
   | "task.completed"
   | "task.cancelled"
   | "task.manual_intervention"
-  | "task.recovered";
+  | "task.recovered"
+  | "task.retry_requested"
+  | "task.retry_spawned";
 
 type AppendTaskEventArgs = {
   taskId: string;

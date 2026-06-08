@@ -112,6 +112,7 @@ type WorkspaceFetcherData =
   | undefined;
 
 type WorkspaceShellProps = {
+  workspaceMode: "creator" | "support";
   runtime: string;
   serviceName: string;
   requestId: string;
@@ -238,6 +239,7 @@ export function resolveWorkspacePreview({
 }
 
 export function WorkspaceShell({
+  workspaceMode,
   runtime,
   serviceName,
   requestId,
@@ -286,6 +288,75 @@ export function WorkspaceShell({
   ].filter(Boolean) as TaskErrorPayload[];
 
   const activeError = errors[0] ?? null;
+
+  if (workspaceMode === "support") {
+    return (
+      <main className="app-shell">
+        <section className="shell-panel shell-hero shell-hero-grid">
+          <div>
+            <p className="eyebrow">Support Diagnostic Workspace</p>
+            <h1>Yakimoji</h1>
+            <p className="lede">
+              当前视图只用于按 task ID 查看支持诊断上下文。不会展示创作者任务导入、预设编辑或交付下载入口。
+            </p>
+          </div>
+
+          <aside className="identity-card">
+            <p className="eyebrow">登录态</p>
+            <h2>{user.displayName}</h2>
+            <p>{user.email}</p>
+            <div className="shell-meta">
+              <span>角色: {roles.join(", ")}</span>
+              <span>Service: {serviceName}</span>
+              <span>Runtime: {runtime}</span>
+            </div>
+            <div className="request-chip">request_id: {requestId}</div>
+            <div className="logout-slot">{logoutForm}</div>
+          </aside>
+        </section>
+
+        <section className="shell-grid workspace-top-grid">
+          <article className="shell-panel shell-nav-panel">
+            <p className="eyebrow">Support Navigation</p>
+            <ul className="shell-list shell-nav-list">
+              {navigation.map((item) => (
+                <li key={item.label}>
+                  <span className={`nav-pill nav-pill-${item.state}`}>{item.label}</span>
+                  <span className="nav-href">{item.href}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+
+          <article className="shell-panel intake-panel">
+            <div className="intake-panel-header">
+              <div>
+                <p className="eyebrow">Diagnostic Scope</p>
+                <h2>支持排障视图</h2>
+              </div>
+              <p className="intake-hint">
+                重点关注失败原因、人工确认记录、retry lineage 与 request_id，不在此视图中处理创作者导入动作。
+              </p>
+            </div>
+
+            <div className="support-panel-stack">
+              {panels.map((panel) => (
+                <section key={panel.title} className="shell-panel shell-note-panel">
+                  <p className="eyebrow">Support Note</p>
+                  <h3>{panel.title}</h3>
+                  <p>{panel.body}</p>
+                </section>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="shell-grid workspace-bottom-grid">
+          {taskDetailPanel}
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="app-shell">

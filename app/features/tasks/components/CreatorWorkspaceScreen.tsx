@@ -4,7 +4,12 @@ import { ChannelPresetWorkbench } from "~/features/presets/components/ChannelPre
 import type { ChannelPresetActionResult } from "~/features/presets/server/channel-presets.server";
 import { WorkspaceShell } from "~/shared/ui/WorkspaceShell";
 
-import type { TaskIntakeActionResult } from "../server/task-intake.server";
+import type { TaskActionError } from "../server/task-errors.server";
+import type {
+  TaskCreatedPayload,
+  TaskIntakeActionResult,
+  TaskPreviewPayload,
+} from "../server/task-intake.server";
 import type { WorkspaceViewModel } from "../server/workspace-view.server";
 import { TaskSyncBridge } from "./TaskSyncBridge";
 import { TaskDetailPanel } from "./TaskDetailPanel";
@@ -20,15 +25,33 @@ export function CreatorWorkspaceScreen({
   const actionData = useActionData<
     TaskIntakeActionResult | ChannelPresetActionResult
   >();
+  type WorkspaceTaskActionData =
+    | TaskPreviewPayload
+    | TaskCreatedPayload
+    | TaskActionError;
+  const isTaskIntakeActionData = (
+    value: TaskIntakeActionResult | ChannelPresetActionResult | null | undefined,
+  ): value is WorkspaceTaskActionData =>
+    Boolean(
+      value &&
+        ((value.ok &&
+          ("mode" in value) &&
+          (value.mode === "preview" || value.mode === "created")) ||
+          (!value.ok &&
+            !("resource" in value) &&
+            !["review_submission_invalid", "retry_unavailable"].includes(value.code))),
+    );
   const taskActionData =
-    actionData &&
-    ((actionData.ok && !("resource" in actionData)) ||
-      (!actionData.ok && !("resource" in actionData)))
-      ? actionData
-      : null;
+    isTaskIntakeActionData(actionData) ? actionData : null;
+  const workspaceMode =
+    loaderData.selectedTask?.accessMode === "support" &&
+    !loaderData.roles.includes("creator")
+      ? "support"
+      : "creator";
 
   return (
     <WorkspaceShell
+      workspaceMode={workspaceMode}
       runtime={loaderData.runtime}
       serviceName={loaderData.serviceName}
       requestId={loaderData.requestId}

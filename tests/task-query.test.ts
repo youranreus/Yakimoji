@@ -6,6 +6,7 @@ import {
   getTaskStatusPresentation,
 } from "../app/features/tasks/server/task-status.server";
 import {
+  getTaskDetailForSupport,
   getTaskDetailForUser,
   listPaginatedTasksForUser,
   setTaskQueryTestHooks,
@@ -167,6 +168,9 @@ test("task detail returns an oldest-to-newest event ledger and readable status s
   assert.match(detail.subtitleTemplateContextSummary, /科普模板/);
   assert.equal(detail.currentStageLabel, "等待人工复核");
   assert.equal(detail.latestProgressLabel, "已进入人工复核队列");
+  assert.equal(detail.attempt.attemptNumber, 1);
+  assert.equal(detail.reviewQueue?.items.length, 0);
+  assert.equal(detail.failureContext, null);
   assert.deepEqual(
     detail.events.map((event) => event.eventType),
     ["task.created", "task.processing", "task.human_review_requested"],
@@ -255,6 +259,136 @@ test("task detail distinguishes task-level subtitle overrides from preset defaul
   assert.equal(detail.subtitleTemplateContextLabel, "任务级字幕模板覆盖");
   assert.match(detail.subtitleTemplateContextSummary, /高对比模板/);
   assert.match(detail.subtitleTemplateContextSummary, /科普模板/);
+});
+
+test("task detail builds low-confidence review queue and preserves creator access mode", async () => {
+  const task = makeTask(4, {
+    status: "awaiting_human_review",
+    sourceSnapshot: {
+      title: "Task 4",
+      attempt: {
+        attemptNumber: 1,
+        originTaskId: "task_4",
+        retryOfTaskId: null,
+      },
+    },
+  });
+  const events = [
+    makeEvent("task_4", "task.created", "2026-05-26T03:00:00.000Z", {
+      fromStatus: "created",
+      toStatus: "created",
+    }),
+    makeEvent("task_4", "task.review_required", "2026-05-26T03:10:00.000Z", {
+      fromStatus: "processing",
+      toStatus: "awaiting_human_review",
+      payload: {
+        reviewId: "review_4",
+        summary: "有两个低置信度片段需要人工确认。",
+        items: [
+          {
+            id: "item_1",
+            snippet: "第一段字幕",
+            contextBefore: "前文 A",
+            contextAfter: "后文 A",
+            confidenceLabel: "低置信度",
+          },
+          {
+            id: "item_2",
+            snippet: "第二段字幕",
+            contextBefore: "前文 B",
+            contextAfter: "后文 B",
+            confidenceLabel: "中低置信度",
+          },
+        ],
+      },
+    }),
+  ];
+
+  setTaskQueryTestHooks({
+    getTaskRowForUserImpl: async () => task,
+    getTaskEventLedgerImpl: async () => events,
+    getLatestTaskEventForTaskImpl: async () => events.at(-1) ?? null,
+    listDeliverablesForTaskDetailImpl: async () => [],
+  });
+
+  const detail = await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_review_queue",
+    }),
+    async () => getTaskDetailForUser(7, "task_4"),
+  );
+
+  assert.equal(detail.accessMode, "creator");
+  assert.equal(detail.reviewQueue?.reviewId, "review_4");
+  assert.equal(detail.reviewQueue?.items.length, 2);
+  assert.equal(detail.reviewQueue?.pendingCount, 2);
+  assert.equal(detail.reviewQueue?.items[0]?.snippet, "第一段字幕");
+});
+
+test("support detail exposes diagnostic timeline and hides deliverables", async () => {
+  const task = makeTask(5, {
+    status: "failed",
+    sourceSnapshot: {
+      title: "Task 5",
+      attempt: {
+        attemptNumber: 2,
+        originTaskId: "task_1",
+        retryOfTaskId: "task_4",
+      },
+    },
+    presetSnapshot: {
+      status: "manual_reuse",
+      summary: "手动复用预设继续",
+    },
+  });
+  const events = [
+    makeEvent("task_5", "task.created", "2026-05-26T04:00:00.000Z", {
+      fromStatus: "created",
+      toStatus: "created",
+    }),
+    makeEvent("task_5", "task.retry_spawned", "2026-05-26T04:02:00.000Z", {
+      fromStatus: "created",
+      toStatus: "queued",
+      payload: {
+        sourceTaskId: "task_4",
+        attemptNumber: 2,
+      },
+    }),
+    makeEvent("task_5", "task.failed", "2026-05-26T04:12:00.000Z", {
+      fromStatus: "processing",
+      toStatus: "failed",
+      reasonCode: "worker_timeout",
+      payload: {
+        failureStage: "字幕生成",
+        failureMessage: "外部处理节点超时。",
+        diagnosticTraceId: "trace_task_5",
+        retryable: true,
+        recommendedAction: "创建新的恢复 attempt。",
+        supportCategory: "worker-timeout",
+      },
+    }),
+  ];
+
+  setTaskQueryTestHooks({
+    getTaskRowByIdImpl: async () => task,
+    getTaskEventLedgerImpl: async () => events,
+    getLatestTaskEventForTaskImpl: async () => events.at(-1) ?? null,
+  });
+
+  const detail = await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_support_detail",
+    }),
+    async () => getTaskDetailForSupport("task_5"),
+  );
+
+  assert.equal(detail.accessMode, "support");
+  assert.equal(detail.failureContext?.reasonCode, "worker_timeout");
+  assert.equal(detail.supportDiagnostics?.attemptNumber, 2);
+  assert.equal(detail.supportDiagnostics?.originTaskId, "task_1");
+  assert.equal(detail.supportDiagnostics?.entries.length, 3);
+  assert.equal(detail.deliverables.length, 0);
+  assert.equal(detail.resultStatus.label, "诊断视图");
 });
 
 test("failed task without a last active event keeps the terminal timeline ambiguous instead of fabricating processing", () => {

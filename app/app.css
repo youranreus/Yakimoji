@@ -622,10 +622,22 @@ body {
   gap: 1rem;
 }
 
+.support-panel-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.task-review-list,
+.task-callout-grid {
+  display: grid;
+  gap: 1rem;
+}
+
 .task-card-link,
 .task-summary-card,
 .task-timeline-panel,
 .task-deliverables-card,
+.task-detail-callout,
 .task-empty-state,
 .task-ledger-item {
   border-radius: 1.25rem;
@@ -637,6 +649,7 @@ body {
 .task-summary-card,
 .task-deliverables-card,
 .task-timeline-panel,
+.task-detail-callout,
 .task-empty-state {
   padding: 1.15rem;
 }
@@ -717,6 +730,100 @@ body {
   margin: 0;
   line-height: 1.55;
   font-weight: 600;
+}
+
+.task-callout-copy {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.task-callout-grid {
+  margin-top: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.task-callout-grid div,
+.task-review-context div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.task-callout-grid dt,
+.task-review-context dt {
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.task-callout-grid dd,
+.task-review-context dd {
+  margin: 0;
+  line-height: 1.55;
+  font-weight: 600;
+}
+
+.task-review-form,
+.task-retry-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.task-review-item {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(41, 37, 36, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.task-review-item-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.task-review-item-heading h4 {
+  margin: 0;
+}
+
+.task-review-snippet {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: 0.9rem;
+  background: rgba(143, 78, 23, 0.06);
+  font-weight: 700;
+}
+
+.task-review-context {
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.text-area {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(41, 37, 36, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  font: inherit;
+  color: var(--text);
+  resize: vertical;
+}
+
+.text-area:focus-visible {
+  outline: 2px solid rgba(143, 78, 23, 0.25);
+  outline-offset: 2px;
+}
+
+.detail-link-inline {
+  justify-self: start;
 }
 
 .task-deliverables-card {
@@ -903,6 +1010,26 @@ body {
 .task-ledger-item-terminal {
   border-color: rgba(143, 36, 24, 0.24);
   background: rgba(255, 243, 240, 0.96);
+}
+
+.task-ledger-item-review {
+  border-color: rgba(138, 88, 13, 0.24);
+  background: rgba(255, 248, 237, 0.96);
+}
+
+.task-ledger-item-failure {
+  border-color: rgba(143, 36, 24, 0.24);
+  background: rgba(255, 243, 240, 0.96);
+}
+
+.task-ledger-item-retry {
+  border-color: rgba(31, 79, 150, 0.2);
+  background: rgba(243, 248, 255, 0.96);
+}
+
+.task-ledger-item-support {
+  border-color: rgba(69, 58, 148, 0.18);
+  background: rgba(247, 245, 255, 0.96);
 }
 
 .task-ledger-topline span {

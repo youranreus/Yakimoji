@@ -10,7 +10,9 @@ export type TaskErrorCode =
   | "upload_failed"
   | "source_recognition_failed"
   | "manual_resolution_invalid"
-  | "confirmation_failed";
+  | "confirmation_failed"
+  | "review_submission_invalid"
+  | "retry_unavailable";
 
 export type TaskActionError = {
   ok: false;

@@ -3,7 +3,10 @@ import { Link, useLocation, useNavigation } from "react-router";
 import type { TaskDetailView } from "../server/task-query.server";
 import { TaskDeliverablesCard } from "./TaskDeliverablesCard";
 import { TaskDetailTimeline } from "./TaskDetailTimeline";
+import { TaskFailureCard } from "./TaskFailureCard";
+import { TaskReviewQueueCard } from "./TaskReviewQueueCard";
 import { TaskStatusSummaryCard } from "./TaskStatusSummaryCard";
+import { TaskSupportDiagnosticsCard } from "./TaskSupportDiagnosticsCard";
 
 type TaskDetailPanelProps = {
   task: TaskDetailView | null;
@@ -39,7 +42,10 @@ export function TaskDetailPanel({
             返回任务列表
           </Link>
           <TaskStatusSummaryCard task={task} />
-          <TaskDeliverablesCard task={task} />
+          <TaskReviewQueueCard task={task} />
+          <TaskFailureCard task={task} />
+          <TaskSupportDiagnosticsCard task={task} />
+          {task.accessMode === "creator" ? <TaskDeliverablesCard task={task} /> : null}
           <TaskDetailTimeline task={task} />
         </div>
       ) : (

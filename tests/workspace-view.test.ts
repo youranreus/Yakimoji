@@ -125,6 +125,15 @@ test("workspace view loader resolves a direct task detail route through the shar
         updatedAt: "2026-05-26T01:10:00.000Z",
         nextStepLabel: "等待处理完成",
         statusTone: "info",
+        accessMode: "creator",
+        attempt: {
+          attemptNumber: 1,
+          originTaskId: taskId,
+          retryOfTaskId: null,
+        },
+        reviewQueue: null,
+        failureContext: null,
+        supportDiagnostics: null,
         resultStatus: {
           label: "结果生成中",
           description: "任务仍在处理中，交付物尚未就绪。",
@@ -176,4 +185,100 @@ test("workspace view loader resolves a direct task detail route through the shar
   assert.equal(model.taskList.meta.pagination.page, 2);
   assert.equal(model.navigation[0]?.href, "/workspace");
   assert.equal(model.panels[0]?.title, "任务状态原则");
+});
+
+test("support-only workspace detail resolves diagnostic access without creator task list", async () => {
+  let supportTaskId = "";
+
+  setWorkspaceViewTestHooks({
+    requireUserSessionImpl: async () => ({
+      user: {
+        id: 17,
+        displayName: "支持人员",
+        email: "support@example.com",
+      },
+      session: {
+        id: "sess_support_1",
+      },
+    }),
+    getCurrentUserRolesImpl: async () => ["support"],
+    requireRoleImpl: async (_authenticated, role) => [role],
+    getTaskDetailForSupportImpl: async (taskId) => {
+      supportTaskId = taskId;
+
+      return {
+        id: taskId,
+        sourceTitle: "Task Support",
+        sourceIdentifier: "youtube:support_task",
+        status: "failed",
+        statusLabel: "处理失败",
+        presetContextLabel: "手动复用已有预设",
+        presetContextSummary: "手动复用预设继续",
+        baselineSummary: "中译中 / 标准模板 / SRT",
+        subtitleTemplateContextLabel: "沿用预设默认模板",
+        subtitleTemplateContextSummary: "当前任务沿用预设默认模板「标准模板」。",
+        currentStageLabel: "处理失败",
+        latestProgressLabel: "处理失败",
+        requestId: "req_support_mode",
+        createdAt: "2026-05-26T01:00:00.000Z",
+        updatedAt: "2026-05-26T01:10:00.000Z",
+        nextStepLabel: "请结合 request_id 和失败说明排查原因",
+        statusTone: "danger",
+        accessMode: "support",
+        attempt: {
+          attemptNumber: 2,
+          originTaskId: "task_origin",
+          retryOfTaskId: "task_prev",
+        },
+        reviewQueue: null,
+        failureContext: {
+          stage: "字幕生成",
+          message: "外部节点超时。",
+          reasonCode: "worker_timeout",
+          diagnosticTraceId: "trace_support",
+          retryable: true,
+          recommendedAction: "创建新的恢复 attempt。",
+          supportCategory: "worker-timeout",
+        },
+        supportDiagnostics: {
+          accessLabel: "Support Diagnostic View",
+          lookupTaskId: taskId,
+          originTaskId: "task_origin",
+          attemptNumber: 2,
+          presetResolution: "manual_reuse",
+          entries: [],
+        },
+        resultStatus: {
+          label: "诊断视图",
+          description: "当前视图仅用于支持排障，不提供交付物访问入口。",
+          tone: "neutral",
+        },
+        deliverables: [],
+        stages: [],
+        events: [],
+      };
+    },
+  });
+
+  const model = await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_support_mode",
+    }),
+    async () =>
+      loadWorkspaceViewModel({
+        request: new Request("http://localhost:3000/workspace/tasks/task_support"),
+        context: {
+          requestId: "req_support_mode",
+          releaseStage: "test",
+          serviceName: "yakimoji",
+        },
+        taskId: "task_support",
+      }),
+  );
+
+  assert.equal(supportTaskId, "task_support");
+  assert.equal(model.roles[0], "support");
+  assert.equal(model.taskList.data.length, 0);
+  assert.equal(model.channelPresets.length, 0);
+  assert.equal(model.selectedTask?.accessMode, "support");
 });
