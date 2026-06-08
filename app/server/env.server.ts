@@ -16,6 +16,10 @@ export type SessionEnvironment = {
   cookieSecure: boolean;
 };
 
+export type ApiCredentialEnvironment = {
+  credentialPepper: string;
+};
+
 function getRequiredEnv(name: string) {
   const value = process.env[name];
 
@@ -53,5 +57,11 @@ export function getSessionEnvironment(): SessionEnvironment {
   return {
     sessionSecret: getRequiredEnv("SESSION_SECRET"),
     cookieSecure: nodeEnv === "production",
+  };
+}
+
+export function getApiCredentialEnvironment(): ApiCredentialEnvironment {
+  return {
+    credentialPepper: getRequiredEnv("API_CREDENTIAL_PEPPER"),
   };
 }

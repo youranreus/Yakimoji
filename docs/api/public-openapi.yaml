@@ -1,0 +1,457 @@
+openapi: 3.2.0
+info:
+  title: Yakimoji Public API
+  version: 0.1.0
+  description: Public contract for external task-processing integrations.
+paths:
+  /tasks:
+    post:
+      operationId: createTask
+      summary: Create a processing task with an API credential
+      security:
+        - bearerApiCredential: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCreateRequest"
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskCreateResponse"
+        "401":
+          description: Missing or invalid API credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Expired or revoked API credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /tasks/{taskId}:
+    get:
+      operationId: getTaskStatus
+      summary: Query task status
+      security:
+        - bearerApiCredential: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task status payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskStatusResponse"
+        "401":
+          description: Missing or invalid API credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden task access or expired credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /tasks/{taskId}/result:
+    get:
+      operationId: getTaskResult
+      summary: Query task result
+      security:
+        - bearerApiCredential: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task result payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResultResponse"
+        "401":
+          description: Missing or invalid API credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden task access or expired credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /tasks/{taskId}/result/deliverables/{deliverableId}/download:
+    get:
+      operationId: downloadTaskDeliverable
+      summary: Download a ready deliverable through the API credential boundary
+      security:
+        - bearerApiCredential: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deliverableId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deliverable binary stream
+        "401":
+          description: Missing or invalid API credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden task access or expired credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task or deliverable not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "410":
+          description: Deliverable expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  securitySchemes:
+    bearerApiCredential:
+      type: http
+      scheme: bearer
+      description: Bearer token in the form `<credentialId>.<secret>`.
+  schemas:
+    TaskCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - sourceType
+        - sourceUrl
+      properties:
+        sourceType:
+          type: string
+          enum:
+            - youtube_link
+        sourceUrl:
+          type: string
+          format: uri
+        metadata:
+          type: object
+          additionalProperties: true
+    TaskCreateResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: object
+          required:
+            - taskId
+            - status
+            - sourceType
+            - createdBy
+            - links
+          properties:
+            taskId:
+              type: string
+            status:
+              type: string
+              enum:
+                - created
+                - awaiting_preset_decision
+            sourceType:
+              type: string
+              enum:
+                - youtube_link
+            createdBy:
+              type: object
+              required:
+                - type
+                - credentialId
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - apiCredential
+                credentialId:
+                  type: string
+            links:
+              type: object
+              required:
+                - task
+                - result
+              properties:
+                task:
+                  type: string
+                result:
+                  type: string
+        meta:
+          type: object
+          required:
+            - requestId
+          properties:
+            requestId:
+              type: string
+    TaskAttempt:
+      type: object
+      required:
+        - attemptNumber
+        - originTaskId
+      properties:
+        attemptNumber:
+          type: integer
+        originTaskId:
+          type: string
+        retryOfTaskId:
+          type:
+            - string
+            - "null"
+    FailureDetails:
+      type: object
+      required:
+        - reasonCode
+        - stage
+        - message
+        - diagnosticTraceId
+        - retryable
+        - recommendedAction
+      properties:
+        reasonCode:
+          type:
+            - string
+            - "null"
+        stage:
+          type: string
+          enum:
+            - source_resolution
+            - preset_matching
+            - queueing
+            - processing
+            - human_review
+            - subtitle_generation
+            - deliverable_packaging
+            - result_delivery
+        message:
+          type: string
+        diagnosticTraceId:
+          type:
+            - string
+            - "null"
+        retryable:
+          type: boolean
+        recommendedAction:
+          type: string
+    PresetResolution:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+        nextAction:
+          type:
+            - string
+            - "null"
+        message:
+          type:
+            - string
+            - "null"
+    TaskStatusResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: object
+          required:
+            - taskId
+            - status
+            - statusLabel
+            - resultState
+            - reviewState
+            - attempt
+            - presetResolution
+            - failure
+          properties:
+            taskId:
+              type: string
+            status:
+              type: string
+            statusLabel:
+              type: string
+            resultState:
+              type: string
+              enum:
+                - not_ready
+                - ready
+                - expired
+                - failed
+            reviewState:
+              type: string
+              enum:
+                - none
+                - required
+                - resolved
+            attempt:
+              $ref: "#/components/schemas/TaskAttempt"
+            presetResolution:
+              $ref: "#/components/schemas/PresetResolution"
+            failure:
+              type:
+                - object
+                - "null"
+              allOf:
+                - $ref: "#/components/schemas/FailureDetails"
+        meta:
+          type: object
+          required:
+            - requestId
+          properties:
+            requestId:
+              type: string
+    TaskResultDeliverable:
+      type: object
+      required:
+        - kind
+        - fileName
+        - mimeType
+        - expiresAt
+      properties:
+        kind:
+          type: string
+        fileName:
+          type: string
+        mimeType:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        download:
+          type:
+            - object
+            - "null"
+          properties:
+            method:
+              type: string
+            href:
+              type: string
+    TaskResultResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: object
+          required:
+            - taskId
+            - status
+            - result
+            - attempt
+            - failure
+          properties:
+            taskId:
+              type: string
+            status:
+              type: string
+            result:
+              type: object
+              required:
+                - state
+                - deliverables
+              properties:
+                state:
+                  type: string
+                  enum:
+                    - not_ready
+                    - ready
+                    - expired
+                    - failed
+                deliverables:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/TaskResultDeliverable"
+            attempt:
+              $ref: "#/components/schemas/TaskAttempt"
+            failure:
+              type:
+                - object
+                - "null"
+              allOf:
+                - $ref: "#/components/schemas/FailureDetails"
+        meta:
+          type: object
+          required:
+            - requestId
+          properties:
+            requestId:
+              type: string
+    ErrorResponse:
+      type: object
+      required:
+        - request_id
+        - error
+      properties:
+        request_id:
+          type: string
+        error:
+          type: object
+          required:
+            - code
+            - message
+            - details
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true

@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review in a fresh context
 
 generated: 2026-05-20T23:45:41+0800
-last_updated: 2026-06-08T10:30:00+0800
+last_updated: 2026-06-08T20:26:00+0800
 project: Yakimoji
 project_key: NOKEY
 tracking_system: file-system
@@ -63,10 +63,10 @@ development_status:
   3-2-failure-explanation-and-retry-to-new-attempt-recovery: done
   3-3-support-timeline-and-diagnostic-context: done
   epic-3-retrospective: done
-  epic-4: backlog
-  4-1-api-credential-validation-and-task-create-request: backlog
-  4-2-api-task-status-and-result-query-contract: backlog
-  4-3-structured-failure-and-non-match-api-responses: backlog
+  epic-4: done
+  4-1-api-credential-validation-and-task-create-request: done
+  4-2-api-task-status-and-result-query-contract: done
+  4-3-structured-failure-and-non-match-api-responses: done
   epic-4-retrospective: optional
   epic-5: backlog
   5-1-mobile-task-visibility-and-deliverable-access: backlog

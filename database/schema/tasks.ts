@@ -8,7 +8,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { users } from "./auth";
+import { apiCredentials, users } from "./auth";
 import { channelPresets } from "./channel-presets";
 
 export const tasks = pgTable(
@@ -18,6 +18,10 @@ export const tasks = pgTable(
     creatorUserId: integer("creator_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    apiCredentialId: varchar("api_credential_id", { length: 64 }).references(
+      () => apiCredentials.id,
+      { onDelete: "set null" },
+    ),
     intakeMethod: varchar("intake_method", { length: 32 }).notNull(),
     sourceUrl: text("source_url"),
     sourceIdentifier: varchar("source_identifier", { length: 320 }).notNull(),
@@ -44,6 +48,7 @@ export const tasks = pgTable(
   },
   (table) => [
     index("tasks_creator_user_id_idx").on(table.creatorUserId),
+    index("tasks_api_credential_id_idx").on(table.apiCredentialId),
     index("tasks_status_idx").on(table.status),
     index("tasks_source_identifier_idx").on(table.sourceIdentifier),
     index("tasks_preset_id_idx").on(table.presetId),

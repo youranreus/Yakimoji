@@ -11,6 +11,7 @@ const envModulePromise = loadTransformedModule("app/server/env.server.ts", [
   [/type RuntimeEnvironment = {[\s\S]*?};\n\n/, ""],
   [/export type AuthEnvironment = {[\s\S]*?};\n\n/, ""],
   [/export type SessionEnvironment = {[\s\S]*?};\n\n/, ""],
+  [/export type ApiCredentialEnvironment = {[\s\S]*?};\n\n/, ""],
   [/function getRequiredEnv\(name: string\)/, "function getRequiredEnv(name)"],
   [
     /export function getRuntimeEnvironment\(\): RuntimeEnvironment/,
@@ -19,6 +20,10 @@ const envModulePromise = loadTransformedModule("app/server/env.server.ts", [
   [/export function getDatabaseUrl\(\)/, "export function getDatabaseUrl()"],
   [/export function getAuthEnvironment\(\): AuthEnvironment/, "export function getAuthEnvironment()"],
   [/export function getSessionEnvironment\(\): SessionEnvironment/, "export function getSessionEnvironment()"],
+  [
+    /export function getApiCredentialEnvironment\(\): ApiCredentialEnvironment/,
+    "export function getApiCredentialEnvironment()",
+  ],
 ]);
 
 test("health API returns the starter baseline contract when the database URL is configured", async () => {

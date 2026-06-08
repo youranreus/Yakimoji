@@ -5,6 +5,13 @@ export default [
   route("login", "routes/login.tsx"),
   route("auth/callback", "routes/auth.callback.tsx"),
   route("logout", "routes/logout.tsx"),
+  route("tasks", "routes/api.tasks.ts"),
+  route("tasks/:taskId", "routes/api.tasks.$taskId.ts"),
+  route("tasks/:taskId/result", "routes/api.tasks.$taskId.result.ts"),
+  route(
+    "tasks/:taskId/result/deliverables/:deliverableId/download",
+    "routes/api.tasks.$taskId.result.deliverables.$deliverableId.download.ts",
+  ),
   route("workspace", "routes/workspace.tsx"),
   route("workspace/tasks/:taskId", "routes/workspace.task-detail.tsx"),
   route("workspace/deliverables/:deliverableId", "routes/workspace.deliverables.$deliverableId.tsx"),

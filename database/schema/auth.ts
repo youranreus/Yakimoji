@@ -88,6 +88,29 @@ export const sessions = pgTable(
   ],
 );
 
+export const apiCredentials = pgTable(
+  "api_credentials",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    ownerUserId: integer("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    label: varchar("label", { length: 160 }).notNull(),
+    secretHash: text("secret_hash").notNull(),
+    status: varchar("status", { length: 32 }).notNull().default("active"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("api_credentials_owner_user_id_idx").on(table.ownerUserId),
+    index("api_credentials_status_idx").on(table.status),
+    index("api_credentials_expires_at_idx").on(table.expiresAt),
+  ],
+);
+
 export const auditLogs = pgTable(
   "audit_logs",
   {
