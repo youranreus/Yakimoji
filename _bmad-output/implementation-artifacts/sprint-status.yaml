@@ -42,7 +42,7 @@ tracking_system: file-system
 story_location: /Users/youranreus/Code/Projects/Yakimoji/_bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: in-progress
+  epic-1: done
   1-1-initialize-the-product-from-the-approved-starter-template: done
   1-2-creator-login-and-protected-workspace-shell: done
   1-3-manual-task-intake-with-source-recognition-preview: done
