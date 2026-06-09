@@ -11,7 +11,9 @@ import type { Route } from "./+types/root";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
-  { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+  { rel: "icon", href: "/icon.png", type: "image/png", sizes: "160x160" },
+  { rel: "shortcut icon", href: "/icon.png", type: "image/png" },
+  { rel: "apple-touch-icon", href: "/icon.png", sizes: "160x160" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
   {
