@@ -14,19 +14,26 @@ test("workspace shell copy still exposes the protected workspace and task detail
   const taskListPanel = readText("app/features/tasks/components/TaskListPanel.tsx");
   const taskDetailPanel = readText("app/features/tasks/components/TaskDetailPanel.tsx");
   const taskSyncBridge = readText("app/features/tasks/components/TaskSyncBridge.tsx");
+  const appCss = readText("app/app.css");
 
   assert.match(workspaceShell, /创作者工作台/);
   assert.match(workspaceShell, /工作区导航/);
   assert.match(workspaceShell, /开始导入/);
   assert.match(workspaceShell, /任务导入/);
+  assert.match(workspaceShell, /直接查看任务跟进/);
+  assert.match(workspaceShell, /workspace-follow-through/);
+  assert.match(workspaceShell, /workspace-panel-slot-detail/);
   assert.doesNotMatch(workspaceShell, /request_id:\s*\{/);
   assert.match(taskListPanel, /任务列表/);
+  assert.match(taskListPanel, /进入详情/);
   assert.match(taskListPanel, /aria-label="任务列表分页"/);
   assert.match(taskDetailPanel, /任务详情/);
   assert.match(taskDetailPanel, /处理记录/);
   assert.match(taskSyncBridge, /自动刷新已开启/);
   assert.match(taskSyncBridge, /定时刷新/);
   assert.match(taskSyncBridge, /EventSource/);
+  assert.match(appCss, /max-width: 767\.98px/);
+  assert.match(appCss, /min-width: 768px\) and \(max-width: 1023\.98px/);
 });
 
 test("route manifest keeps the workspace list and direct detail routes registered", () => {

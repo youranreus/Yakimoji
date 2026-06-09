@@ -1,12 +1,19 @@
 import type { TaskDetailView } from "../server/task-query.server";
-import { formatTaskDate } from "./task-formatters";
+import {
+  formatTaskDate,
+  getDeliverableAvailabilityCopy,
+} from "./task-formatters";
 
 type TaskDeliverablesCardProps = {
   task: TaskDetailView;
 };
 
-function getActionLabel(canDownload: boolean) {
-  return canDownload ? "下载成品" : "暂不可下载";
+function getActionLabel(kind: string, canDownload: boolean) {
+  if (!canDownload) {
+    return "暂不可下载";
+  }
+
+  return kind === "video" ? "下载视频" : "下载字幕";
 }
 
 export function TaskDeliverablesCard({ task }: TaskDeliverablesCardProps) {
@@ -37,6 +44,9 @@ export function TaskDeliverablesCard({ task }: TaskDeliverablesCardProps) {
                 <p className="task-deliverable-title">
                   {deliverable.kindLabel} · {deliverable.fileName}
                 </p>
+                <p className="task-deliverable-copy">
+                  {getDeliverableAvailabilityCopy(deliverable.status)}
+                </p>
                 <dl className="task-deliverable-meta">
                   <div>
                     <dt>类型</dt>
@@ -59,11 +69,11 @@ export function TaskDeliverablesCard({ task }: TaskDeliverablesCardProps) {
 
               {deliverable.canDownload && deliverable.downloadAction ? (
                 <a className="secondary-action deliverable-link" href={deliverable.downloadAction}>
-                  {getActionLabel(deliverable.canDownload)}
+                  {getActionLabel(deliverable.kind, deliverable.canDownload)}
                 </a>
               ) : (
                 <span className="deliverable-link deliverable-link-disabled">
-                  {getActionLabel(deliverable.canDownload)}
+                  {getActionLabel(deliverable.kind, deliverable.canDownload)}
                 </span>
               )}
             </article>

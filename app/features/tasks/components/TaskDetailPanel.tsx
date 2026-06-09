@@ -32,7 +32,7 @@ export function TaskDetailPanel({
         <p className="task-loading-copy" aria-live="polite">
           {pendingDetail
             ? "正在加载任务详情..."
-            : "查看当前阶段、最近进展和处理记录。"}
+            : "查看当前阶段、最近进展、结果状态和处理记录。"}
         </p>
       </div>
 

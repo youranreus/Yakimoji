@@ -52,6 +52,7 @@ export function CreatorWorkspaceScreen({
   return (
     <WorkspaceShell
       workspaceMode={workspaceMode}
+      hasSelectedTask={Boolean(loaderData.selectedTask)}
       runtime={loaderData.runtime}
       serviceName={loaderData.serviceName}
       requestId={loaderData.requestId}

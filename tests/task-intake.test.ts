@@ -29,6 +29,57 @@ function createFakeDb() {
   const taskRows: Array<Record<string, unknown>> = [];
   const taskEventRows: Array<Record<string, unknown>> = [];
 
+  function collectConditionValues(
+    input: unknown,
+    values: unknown[] = [],
+    seen = new WeakSet<object>(),
+  ) {
+    if (input == null) {
+      return values;
+    }
+
+    if (Array.isArray(input)) {
+      input.forEach((entry) => collectConditionValues(entry, values, seen));
+      return values;
+    }
+
+    if (typeof input !== "object") {
+      values.push(input);
+      return values;
+    }
+
+    if (seen.has(input)) {
+      return values;
+    }
+
+    seen.add(input);
+
+    for (const value of Object.values(input)) {
+      collectConditionValues(value, values, seen);
+    }
+
+    return values;
+  }
+
+  function createOrderedResult<T>(rows: T[]) {
+    return Object.assign([...rows], {
+      async limit() {
+        return rows;
+      },
+    });
+  }
+
+  function createWhereChain<T>(rows: T[]) {
+    return {
+      async limit() {
+        return rows;
+      },
+      orderBy() {
+        return createOrderedResult(rows);
+      },
+    };
+  }
+
   const db = {
     async transaction<T>(callback: (tx: typeof db) => Promise<T>) {
       return callback(db);
@@ -95,8 +146,22 @@ function createFakeDb() {
                     return [];
                   }
 
-                  const taskId = String(whereClause.right.value);
-                  const existing = taskRows.find((row) => row.id === taskId);
+                  const conditionValues = collectConditionValues(whereClause);
+                  const taskId = conditionValues.find(
+                    (value) =>
+                      typeof value === "string" &&
+                      taskRows.some((row) => row.id === value),
+                  );
+                  const fromStatus = conditionValues.find(
+                    (value) =>
+                      typeof value === "string" &&
+                      taskRows.some((row) => row.status === value),
+                  );
+                  const existing = taskRows.find(
+                    (row) =>
+                      (taskId == null || row.id === taskId) &&
+                      (fromStatus == null || row.status === fromStatus),
+                  );
 
                   if (!existing) {
                     return [];
@@ -134,24 +199,24 @@ function createFakeDb() {
           if (tableName === "tasks") {
             return {
               where() {
-                return {
-                  orderBy() {
-                    return {
-                      async limit() {
-                        void selection;
-                        return taskRows.map((row) => ({
-                          id: row.id,
-                          status: row.status,
-                          intakeMethod: row.intakeMethod,
-                          sourceIdentifier: row.sourceIdentifier,
-                          sourceSnapshot: row.sourceSnapshot,
-                          processingBaselineSnapshot: row.processingBaselineSnapshot,
-                          createdAt: row.createdAt,
-                        }));
-                      },
-                    };
-                  },
-                };
+                void selection;
+                return createWhereChain(
+                  taskRows.map((row) => ({
+                    id: row.id,
+                    creatorUserId: row.creatorUserId,
+                    intakeMethod: row.intakeMethod,
+                    sourceUrl: row.sourceUrl,
+                    sourceIdentifier: row.sourceIdentifier,
+                    sourceSnapshot: row.sourceSnapshot,
+                    processingBaselineSnapshot: row.processingBaselineSnapshot,
+                    presetId: row.presetId,
+                    presetSnapshot: row.presetSnapshot,
+                    uploadStorageKey: row.uploadStorageKey,
+                    status: row.status,
+                    createdAt: row.createdAt,
+                    updatedAt: row.updatedAt,
+                  })),
+                );
               },
             };
           }
@@ -159,16 +224,8 @@ function createFakeDb() {
           if (tableName === "task_events") {
             return {
               where() {
-                return {
-                  orderBy() {
-                    return {
-                      async limit() {
-                        void selection;
-                        return [...taskEventRows];
-                      },
-                    };
-                  },
-                };
+                void selection;
+                return createWhereChain([...taskEventRows]);
               },
             };
           }
@@ -696,6 +753,185 @@ test("invalid task-level subtitle template override keeps the preview draft avai
 
         assert.equal(fake.draftRows.size, 1);
         assert.equal(fake.taskRows.length, 0);
+      });
+    },
+  );
+});
+
+test("submit review persists resolved decisions and moves the task back to queued", async () => {
+  const fake = createFakeDb();
+  const now = new Date("2026-06-09T12:00:00.000Z");
+
+  fake.taskRows.push({
+    id: "task_review_1",
+    creatorUserId: 7,
+    intakeMethod: "youtube_link",
+    sourceUrl: "https://www.youtube.com/watch?v=abc123",
+    sourceIdentifier: "youtube:ReviewChannel",
+    sourceSnapshot: {
+      title: "Review Channel",
+    },
+    processingBaselineSnapshot: {
+      translationMode: "中译中字幕",
+      subtitleTemplate: "标准模板",
+      outputPackage: "mp4 + srt",
+    },
+    presetId: null,
+    presetSnapshot: null,
+    uploadStorageKey: null,
+    status: "awaiting_human_review",
+    createdAt: now,
+    updatedAt: now,
+  });
+  fake.taskEventRows.push({
+    id: "evt_review_required",
+    taskId: "task_review_1",
+    eventType: "task.review_required",
+    fromStatus: "processing",
+    toStatus: "awaiting_human_review",
+    reasonCode: null,
+    requestId: "req_review_submit",
+    payload: {
+      reviewId: "review_1",
+      summary: "当前任务需要处理 2 个低置信度片段。",
+      items: [
+        {
+          id: "item_1",
+          snippet: "第一段字幕",
+          contextBefore: "前文一",
+          contextAfter: "后文一",
+          confidenceLabel: "低置信度",
+          suggestedAction: "确认是否可直接沿用。",
+        },
+        {
+          id: "item_2",
+          snippet: "第二段字幕",
+          contextBefore: "前文二",
+          contextAfter: "后文二",
+          confidenceLabel: "低置信度",
+          suggestedAction: "如需继续关注请标记。",
+        },
+      ],
+    },
+    createdAt: now,
+  });
+
+  setTaskIntakeTestHooks({
+    nowImpl: () => now,
+  });
+
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_review_submit",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        const response = await handleTaskIntakeAction(
+          7,
+          makeUrlEncodedRequest({
+            intent: "submit_review",
+            taskId: "task_review_1",
+            "reviewDecision:item_1": "approve",
+            "reviewNote:item_1": "可以继续",
+            "reviewDecision:item_2": "needs_attention",
+            "reviewNote:item_2": "需要继续关注",
+          }, "req_review_submit"),
+        );
+
+        assert.equal(response.ok, true);
+        assert.equal(response.mode, "review_submitted");
+        assert.equal(response.resolvedCount, 2);
+        assert.equal(fake.taskRows[0]?.status, "queued");
+        assert.equal(fake.taskEventRows.at(-1)?.eventType, "task.review_resolved");
+        assert.deepEqual(
+          (fake.taskEventRows.at(-1)?.payload as { resolvedItems?: unknown[] })?.resolvedItems,
+          [
+            {
+              itemId: "item_1",
+              decision: "approve",
+              note: "可以继续",
+            },
+            {
+              itemId: "item_2",
+              decision: "needs_attention",
+              note: "需要继续关注",
+            },
+          ],
+        );
+      });
+    },
+  );
+});
+
+test("submit review rejects invalid decisions without mutating the task state", async () => {
+  const fake = createFakeDb();
+  const now = new Date("2026-06-09T12:30:00.000Z");
+
+  fake.taskRows.push({
+    id: "task_review_invalid",
+    creatorUserId: 7,
+    intakeMethod: "youtube_link",
+    sourceUrl: "https://www.youtube.com/watch?v=abc123",
+    sourceIdentifier: "youtube:ReviewChannel",
+    sourceSnapshot: {
+      title: "Review Channel",
+    },
+    processingBaselineSnapshot: {
+      translationMode: "中译中字幕",
+      subtitleTemplate: "标准模板",
+      outputPackage: "mp4 + srt",
+    },
+    presetId: null,
+    presetSnapshot: null,
+    uploadStorageKey: null,
+    status: "awaiting_human_review",
+    createdAt: now,
+    updatedAt: now,
+  });
+  fake.taskEventRows.push({
+    id: "evt_review_required_invalid",
+    taskId: "task_review_invalid",
+    eventType: "task.review_required",
+    fromStatus: "processing",
+    toStatus: "awaiting_human_review",
+    reasonCode: null,
+    requestId: "req_review_invalid",
+    payload: {
+      reviewId: "review_invalid",
+      items: [
+        {
+          id: "item_invalid",
+          snippet: "第一段字幕",
+        },
+      ],
+    },
+    createdAt: now,
+  });
+
+  await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_review_invalid",
+    }),
+    async () => {
+      await DatabaseContext.run(fake.db as never, async () => {
+        await assert.rejects(
+          handleTaskIntakeAction(
+            7,
+            makeUrlEncodedRequest({
+              intent: "submit_review",
+              taskId: "task_review_invalid",
+            }, "req_review_invalid"),
+          ),
+          (error: any) => {
+            assert.equal(error.constructor?.name, "DataWithResponseInit");
+            assert.equal(error.data.code, "review_submission_invalid");
+            assert.equal(error.data.field, "item_invalid");
+            return true;
+          },
+        );
+
+        assert.equal(fake.taskRows[0]?.status, "awaiting_human_review");
+        assert.equal(fake.taskEventRows.length, 1);
       });
     },
   );

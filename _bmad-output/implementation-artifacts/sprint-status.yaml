@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review in a fresh context
 
 generated: 2026-05-20T23:45:41+0800
-last_updated: 2026-06-08T20:26:00+0800
+last_updated: 2026-06-09T20:10:45+0800
 project: Yakimoji
 project_key: NOKEY
 tracking_system: file-system
@@ -68,9 +68,9 @@ development_status:
   4-2-api-task-status-and-result-query-contract: done
   4-3-structured-failure-and-non-match-api-responses: done
   epic-4-retrospective: optional
-  epic-5: backlog
-  5-1-mobile-task-visibility-and-deliverable-access: backlog
-  5-2-mobile-low-confidence-approve-or-reopen-flow: backlog
+  epic-5: done
+  5-1-mobile-task-visibility-and-deliverable-access: done
+  5-2-mobile-low-confidence-approve-or-reopen-flow: done
   epic-5-retrospective: optional
   epic-6: backlog
   6-1-operations-visibility-dashboard-for-preset-reuse-and-task-flow: backlog

@@ -1,7 +1,10 @@
 import { Link, useLocation, useNavigation } from "react-router";
 
 import type { PaginatedTaskList } from "../server/task-query.server";
-import { formatTaskDate } from "./task-formatters";
+import {
+  formatTaskDate,
+  getTaskEntryActionCopy,
+} from "./task-formatters";
 
 type TaskListPanelProps = {
   taskList: PaginatedTaskList;
@@ -103,6 +106,12 @@ export function TaskListPanel({
                   <dd>{formatTaskDate(task.updatedAt)}</dd>
                 </div>
               </dl>
+              <div className="task-card-footer">
+                <span className="task-card-action-hint">
+                  {getTaskEntryActionCopy(task.status)}
+                </span>
+                <span className="task-card-action-link">进入详情</span>
+              </div>
             </Link>
           ))}
         </div>

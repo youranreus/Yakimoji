@@ -113,6 +113,7 @@ type WorkspaceFetcherData =
 
 type WorkspaceShellProps = {
   workspaceMode: "creator" | "support";
+  hasSelectedTask: boolean;
   runtime: string;
   serviceName: string;
   requestId: string;
@@ -240,6 +241,7 @@ export function resolveWorkspacePreview({
 
 export function WorkspaceShell({
   workspaceMode,
+  hasSelectedTask,
   user,
   navigation,
   panels,
@@ -347,7 +349,9 @@ export function WorkspaceShell({
   }
 
   return (
-    <main className="app-shell">
+    <main
+      className={`app-shell creator-workspace-shell ${hasSelectedTask ? "creator-workspace-shell-selected-task" : ""}`}
+    >
       <section className="shell-panel shell-hero shell-hero-grid">
         <div>
           <p className="eyebrow">创作者工作台</p>
@@ -364,6 +368,10 @@ export function WorkspaceShell({
           <div className="logout-slot">{logoutForm}</div>
         </aside>
       </section>
+
+      <a className="mobile-followthrough-link secondary-action" href="#workspace-follow-through">
+        直接查看任务跟进
+      </a>
 
       <section className="shell-grid workspace-top-grid">
         <article className="shell-panel shell-nav-panel">
@@ -737,9 +745,17 @@ export function WorkspaceShell({
 
       {presetPanel}
 
-      <section className="shell-grid workspace-bottom-grid">
-        {taskListPanel}
-        {taskDetailPanel}
+      <section
+        className="shell-grid workspace-bottom-grid"
+        id="workspace-follow-through"
+        aria-label="任务跟进"
+      >
+        <div className="workspace-panel-slot workspace-panel-slot-list">
+          {taskListPanel}
+        </div>
+        <div className="workspace-panel-slot workspace-panel-slot-detail">
+          {taskDetailPanel}
+        </div>
       </section>
     </main>
   );
