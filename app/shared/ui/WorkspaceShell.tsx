@@ -240,11 +240,7 @@ export function resolveWorkspacePreview({
 
 export function WorkspaceShell({
   workspaceMode,
-  runtime,
-  serviceName,
-  requestId,
   user,
-  roles,
   navigation,
   panels,
   actionData,
@@ -294,30 +290,22 @@ export function WorkspaceShell({
       <main className="app-shell">
         <section className="shell-panel shell-hero shell-hero-grid">
           <div>
-            <p className="eyebrow">Support Diagnostic Workspace</p>
+            <p className="eyebrow">支持工作台</p>
             <h1>Yakimoji</h1>
-            <p className="lede">
-              当前视图只用于按 task ID 查看支持诊断上下文。不会展示创作者任务导入、预设编辑或交付下载入口。
-            </p>
+            <p className="lede">查看任务进度、失败原因和最近处理记录，便于快速判断下一步。</p>
           </div>
 
           <aside className="identity-card">
-            <p className="eyebrow">登录态</p>
+            <p className="eyebrow">当前账号</p>
             <h2>{user.displayName}</h2>
             <p>{user.email}</p>
-            <div className="shell-meta">
-              <span>角色: {roles.join(", ")}</span>
-              <span>Service: {serviceName}</span>
-              <span>Runtime: {runtime}</span>
-            </div>
-            <div className="request-chip">request_id: {requestId}</div>
             <div className="logout-slot">{logoutForm}</div>
           </aside>
         </section>
 
         <section className="shell-grid workspace-top-grid">
           <article className="shell-panel shell-nav-panel">
-            <p className="eyebrow">Support Navigation</p>
+            <p className="eyebrow">工作区导航</p>
             <ul className="shell-list shell-nav-list">
               {navigation.map((item) => (
                 <li key={item.label}>
@@ -331,18 +319,18 @@ export function WorkspaceShell({
           <article className="shell-panel intake-panel">
             <div className="intake-panel-header">
               <div>
-                <p className="eyebrow">Diagnostic Scope</p>
-                <h2>支持排障视图</h2>
+                <p className="eyebrow">处理重点</p>
+                <h2>支持排查</h2>
               </div>
               <p className="intake-hint">
-                重点关注失败原因、人工确认记录、retry lineage 与 request_id，不在此视图中处理创作者导入动作。
+                优先确认失败环节、处理建议和最近操作记录。
               </p>
             </div>
 
             <div className="support-panel-stack">
               {panels.map((panel) => (
                 <section key={panel.title} className="shell-panel shell-note-panel">
-                  <p className="eyebrow">Support Note</p>
+                  <p className="eyebrow">提示</p>
                   <h3>{panel.title}</h3>
                   <p>{panel.body}</p>
                 </section>
@@ -362,31 +350,24 @@ export function WorkspaceShell({
     <main className="app-shell">
       <section className="shell-panel shell-hero shell-hero-grid">
         <div>
-          <p className="eyebrow">Protected Workspace</p>
+          <p className="eyebrow">创作者工作台</p>
           <h1>Yakimoji</h1>
           <p className="lede">
-            任务导入现在是工作台主行动区。你可以直接粘贴 YouTube 链接或上传视频，
-            系统会先给出来源识别与默认处理基线，再由你确认是否正式写入任务记录。
+            在这里导入任务、确认默认设置，并持续查看处理进度。
           </p>
         </div>
 
         <aside className="identity-card">
-          <p className="eyebrow">登录态</p>
+          <p className="eyebrow">当前账号</p>
           <h2>{user.displayName}</h2>
           <p>{user.email}</p>
-          <div className="shell-meta">
-            <span>角色: {roles.join(", ")}</span>
-            <span>Service: {serviceName}</span>
-            <span>Runtime: {runtime}</span>
-          </div>
-          <div className="request-chip">request_id: {requestId}</div>
           <div className="logout-slot">{logoutForm}</div>
         </aside>
       </section>
 
       <section className="shell-grid workspace-top-grid">
         <article className="shell-panel shell-nav-panel">
-          <p className="eyebrow">Global Navigation</p>
+          <p className="eyebrow">工作区导航</p>
           <ul className="shell-list shell-nav-list">
             {navigation.map((item) => (
               <li key={item.label}>
@@ -400,20 +381,18 @@ export function WorkspaceShell({
         <article className="shell-panel intake-panel">
           <div className="intake-panel-header">
             <div>
-              <p className="eyebrow">Main Content</p>
+              <p className="eyebrow">开始导入</p>
               <h2>任务导入</h2>
             </div>
-            <p className="intake-hint">
-              先识别，再确认。不会在你看不到的前端临时态里“假提交”。
-            </p>
+            <p className="intake-hint">先确认来源与默认设置，再创建任务。</p>
           </div>
 
           <div className="intake-grid">
             <section className="intake-card">
-              <p className="eyebrow">YouTube Link</p>
+              <p className="eyebrow">链接导入</p>
               <h3>粘贴链接开始识别</h3>
               <p className="intake-copy">
-                适合熟悉频道的高频导入。识别成功后会展示来源标识和当前默认处理基线。
+                适合从公开视频链接快速创建任务。识别完成后会展示将要使用的默认设置。
               </p>
 
               <youtubeFetcher.Form
@@ -443,11 +422,9 @@ export function WorkspaceShell({
             </section>
 
             <section className="intake-card">
-              <p className="eyebrow">Video Upload</p>
+              <p className="eyebrow">视频上传</p>
               <h3>上传视频建立创建上下文</h3>
-              <p className="intake-copy">
-                上传只会保存服务端对象引用，不会把视频二进制写入数据库。
-              </p>
+              <p className="intake-copy">适合直接从本地视频开始创建任务。</p>
 
               <uploadFetcher.Form
                 method="post"
@@ -475,31 +452,23 @@ export function WorkspaceShell({
 
           {activeError ? (
             <section className="inline-feedback inline-feedback-error" aria-live="polite">
-              <p className="feedback-title">Inline Error</p>
-              <h3>当前任务创建上下文未建立</h3>
+              <p className="feedback-title">暂时无法创建任务</p>
+              <h3>请检查后重试</h3>
               <p>{activeError.message}</p>
-              <div className="feedback-meta">
-                <span>code: {activeError.code}</span>
-                <span>request_id: {activeError.request_id}</span>
-              </div>
             </section>
           ) : null}
 
           {preview ? (
             <section className="preview-stack" aria-live="polite">
               <div className="inline-feedback inline-feedback-info">
-                <p className="feedback-title">Recognition In Progress</p>
-                <h3>来源识别完成，可以确认任务创建</h3>
+                <p className="feedback-title">识别完成</p>
+                <h3>可以继续创建任务</h3>
                 <p>{preview.source.previewLabel}</p>
-                <div className="feedback-meta">
-                  <span>状态: {preview.status}</span>
-                  <span>request_id: {preview.requestId}</span>
-                </div>
               </div>
 
               <div className="preview-ledger">
                 <section className="ledger-card">
-                  <p className="eyebrow">Recognized Source</p>
+                  <p className="eyebrow">来源信息</p>
                   <h3>{preview.source.title}</h3>
                   <dl className="ledger-list">
                     <div>
@@ -518,7 +487,7 @@ export function WorkspaceShell({
                 </section>
 
                 <section className="ledger-card">
-                  <p className="eyebrow">Processing Baseline</p>
+                  <p className="eyebrow">默认设置</p>
                   <h3>当前默认处理基线</h3>
                   <dl className="ledger-list">
                     <div>
@@ -537,7 +506,7 @@ export function WorkspaceShell({
                 </section>
 
                 <section className="ledger-card">
-                  <p className="eyebrow">Preset Match</p>
+                  <p className="eyebrow">预设匹配</p>
                   <h3>{getPreviewPresetHeading(preview.presetMatch)}</h3>
                   <dl className="ledger-list">
                     <div>
@@ -562,10 +531,10 @@ export function WorkspaceShell({
                   <input type="hidden" name="intent" value="confirm" />
                   <input type="hidden" name="draftToken" value={preview.draftToken} />
                   <div>
-                    <p className="eyebrow">Confirmation</p>
+                    <p className="eyebrow">确认创建</p>
                     <h3>正式写入任务记录</h3>
                     <p className="intake-copy">
-                      本次确认会创建真实 `tasks` 记录，并进入后续 story 可继续消费的初始状态。
+                      确认后会创建任务，并按照当前设置继续处理。
                     </p>
                     <label className="field-label">
                       任务级字幕模板覆盖
@@ -577,9 +546,7 @@ export function WorkspaceShell({
                           </option>
                         ))}
                       </select>
-                      <span className="field-hint">
-                        只影响当前任务，不会修改底层频道预设。
-                      </span>
+                      <span className="field-hint">只影响当前任务。</span>
                       {activeError?.field === "subtitleTemplateOverride" ? (
                         <span className="field-error">{activeError.message}</span>
                       ) : null}
@@ -592,10 +559,10 @@ export function WorkspaceShell({
               ) : (
                 <section className="decision-stack">
                   <div className="inline-feedback inline-feedback-info">
-                    <p className="feedback-title">Unknown Source Resolution</p>
+                    <p className="feedback-title">需要选择预设</p>
                     <h3>当前来源未命中现有预设</h3>
                     <p>
-                      这是一次轻量决策。你可以复用已有预设、为当前来源创建最小预设，或不保存预设直接继续当前任务。
+                      你可以复用已有预设、保存一个新预设，或直接按当前设置继续。
                     </p>
                   </div>
 
@@ -604,7 +571,7 @@ export function WorkspaceShell({
                       <input type="hidden" name="intent" value="confirm_manual_reuse" />
                       <input type="hidden" name="draftToken" value={preview.draftToken} />
                       <div>
-                        <p className="eyebrow">Reuse Existing</p>
+                        <p className="eyebrow">复用预设</p>
                         <h3>复用已有预设</h3>
                         <p className="intake-copy">
                           适合当前来源与已有频道规则足够接近的场景。
@@ -664,10 +631,10 @@ export function WorkspaceShell({
                       <input type="hidden" name="intent" value="confirm_manual_create" />
                       <input type="hidden" name="draftToken" value={preview.draftToken} />
                       <div>
-                        <p className="eyebrow">Create Minimal Preset</p>
+                        <p className="eyebrow">新建预设</p>
                         <h3>创建最小预设后继续</h3>
                         <p className="intake-copy">
-                          只填写当前任务真正需要的最小字段，不离开工作台，不进入复杂后台。
+                          保存当前常用设置，方便后续同类任务直接复用。
                         </p>
                       </div>
                       <div className="decision-form-grid">
@@ -738,10 +705,10 @@ export function WorkspaceShell({
                       />
                       <input type="hidden" name="draftToken" value={preview.draftToken} />
                       <div>
-                        <p className="eyebrow">Continue Once</p>
+                        <p className="eyebrow">直接继续</p>
                         <h3>不保存预设直接继续</h3>
                         <p className="intake-copy">
-                          适合一次性任务。系统会继续使用当前默认处理基线，但不会沉淀新的频道资产。
+                          适合一次性任务。系统会按当前设置继续，但不会保存为可复用预设。
                         </p>
                       </div>
                       <button className="secondary-action" type="submit">
@@ -756,15 +723,12 @@ export function WorkspaceShell({
 
           {created ? (
             <section className="inline-feedback inline-feedback-success" aria-live="polite">
-              <p className="feedback-title">Task Created</p>
-              <h3>任务已写入工作台</h3>
-              <p>
-                {created.task.sourceTitle} 已创建为 `{created.task.id}`，当前状态为 `{created.task.status}`。
-              </p>
+              <p className="feedback-title">任务已创建</p>
+              <h3>已加入任务列表</h3>
+              <p>{created.task.sourceTitle} 已创建完成，可在下方列表查看最新进度。</p>
               <div className="feedback-meta">
                 <span>{created.task.baselineSummary}</span>
                 <span>{getCreatedPresetSummary(created.task.presetMatch)}</span>
-                <span>request_id: {created.requestId}</span>
               </div>
             </section>
           ) : null}
@@ -776,38 +740,6 @@ export function WorkspaceShell({
       <section className="shell-grid workspace-bottom-grid">
         {taskListPanel}
         {taskDetailPanel}
-      </section>
-
-      <section className="shell-grid">
-        <article className="shell-panel shell-main-panel">
-          <p className="eyebrow">Support Panels</p>
-          <div className="panel-stack">
-            {panels.map((panel) => (
-              <section className="mini-panel" key={panel.title}>
-                <h3>{panel.title}</h3>
-                <p>{panel.body}</p>
-              </section>
-            ))}
-          </div>
-        </article>
-
-        <article className="shell-panel">
-          <p className="eyebrow">Security Boundaries</p>
-          <ul className="shell-list">
-            <li>SSO 只负责身份认证，Yakimoji 负责本地 session 与本地授权。</li>
-            <li>浏览器仅保存 HttpOnly 的 Yakimoji session cookie，不暴露上游 token。</li>
-            <li>高敏感拒绝响应与审计事件共用 request_id 做支持追踪。</li>
-          </ul>
-        </article>
-
-        <article className="shell-panel">
-          <p className="eyebrow">Current Scope</p>
-          <ul className="shell-list">
-            <li>已完成：登录入口、SSO 回调、本地会话、最小 RBAC、任务导入预览、预设命中、未知来源人工决策与任务级模板覆盖。</li>
-            <li>待接入：低置信度 review 队列、实时同步、交付访问与运营侧可视化。</li>
-            <li>公开路由保留：`/health` 与 `/login`。</li>
-          </ul>
-        </article>
       </section>
     </main>
   );

@@ -26,7 +26,7 @@ const envModulePromise = loadTransformedModule("app/server/env.server.ts", [
   ],
 ]);
 
-test("health API returns the starter baseline contract when the database URL is configured", async () => {
+test("health API returns the minimal public health contract", async () => {
   const healthModule = await healthModulePromise;
   const originalDatabaseUrl = process.env.DATABASE_URL;
 
@@ -39,9 +39,6 @@ test("health API returns the starter baseline contract when the database URL is 
     assert.equal(response.status, 200);
     assert.deepEqual(payload, {
       status: "ok",
-      service: "yakimoji",
-      databaseUrlConfigured: true,
-      migrationDirectory: "drizzle",
     });
   } finally {
     if (originalDatabaseUrl === undefined) {
@@ -52,7 +49,7 @@ test("health API returns the starter baseline contract when the database URL is 
   }
 });
 
-test("health API reports the missing database configuration without crashing the route", async () => {
+test("health API keeps the same minimal response when database configuration is missing", async () => {
   const healthModule = await healthModulePromise;
   const originalDatabaseUrl = process.env.DATABASE_URL;
 
@@ -63,8 +60,9 @@ test("health API reports the missing database configuration without crashing the
     const payload = await response.json();
 
     assert.equal(response.status, 200);
-    assert.equal(payload.databaseUrlConfigured, false);
-    assert.equal(payload.status, "ok");
+    assert.deepEqual(payload, {
+      status: "ok",
+    });
   } finally {
     if (originalDatabaseUrl === undefined) {
       delete process.env.DATABASE_URL;

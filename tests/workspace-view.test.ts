@@ -184,7 +184,7 @@ test("workspace view loader resolves a direct task detail route through the shar
   assert.equal(model.channelPresets[0]?.displayName, "Task 1 Channel");
   assert.equal(model.taskList.meta.pagination.page, 2);
   assert.equal(model.navigation[0]?.href, "/workspace");
-  assert.equal(model.panels[0]?.title, "任务状态原则");
+  assert.equal(model.panels[0]?.title, "查看重点");
 });
 
 test("support-only workspace detail resolves diagnostic access without creator task list", async () => {
@@ -222,7 +222,7 @@ test("support-only workspace detail resolves diagnostic access without creator t
         requestId: "req_support_mode",
         createdAt: "2026-05-26T01:00:00.000Z",
         updatedAt: "2026-05-26T01:10:00.000Z",
-        nextStepLabel: "请结合 request_id 和失败说明排查原因",
+        nextStepLabel: "请查看失败原因与建议动作后再继续处理",
         statusTone: "danger",
         accessMode: "support",
         attempt: {
@@ -250,7 +250,7 @@ test("support-only workspace detail resolves diagnostic access without creator t
         },
         resultStatus: {
           label: "诊断视图",
-          description: "当前视图仅用于支持排障，不提供交付物访问入口。",
+          description: "当前页面用于查看任务进度、异常原因和处理记录。",
           tone: "neutral",
         },
         deliverables: [],
@@ -281,4 +281,5 @@ test("support-only workspace detail resolves diagnostic access without creator t
   assert.equal(model.taskList.data.length, 0);
   assert.equal(model.channelPresets.length, 0);
   assert.equal(model.selectedTask?.accessMode, "support");
+  assert.equal(model.selectedTask?.nextStepLabel, "请查看失败原因与建议动作后再继续处理");
 });

@@ -5,6 +5,23 @@ type TaskSupportDiagnosticsCardProps = {
   task: TaskDetailView;
 };
 
+function formatPresetResolution(status: string) {
+  switch (status) {
+    case "matched":
+      return "命中已有预设";
+    case "manual_reuse":
+      return "复用已有预设";
+    case "manual_create":
+      return "已创建新预设";
+    case "continue_without_preset":
+      return "未保存预设";
+    case "unresolved":
+      return "仍待确认";
+    default:
+      return "未提供";
+  }
+}
+
 export function TaskSupportDiagnosticsCard({
   task,
 }: TaskSupportDiagnosticsCardProps) {
@@ -18,30 +35,20 @@ export function TaskSupportDiagnosticsCard({
     <section className="task-detail-callout task-support-card" aria-labelledby="task-support-title">
       <div className="task-detail-section-heading">
         <div>
-          <p className="eyebrow">Support Diagnostic</p>
-          <h3 id="task-support-title">支持时间线与诊断上下文</h3>
+          <p className="eyebrow">处理记录</p>
+          <h3 id="task-support-title">最近处理记录</h3>
         </div>
-        <p className="task-panel-copy">
-          当前视图使用 support 权限读取 task ID `{diagnostics.lookupTaskId}` 的诊断信息。
-        </p>
+        <p className="task-panel-copy">这里汇总当前任务的关键处理节点，方便快速判断下一步。</p>
       </div>
 
       <dl className="task-callout-grid">
         <div>
-          <dt>权限模式</dt>
-          <dd>{diagnostics.accessLabel}</dd>
+          <dt>当前处理轮次</dt>
+          <dd>{diagnostics.attemptNumber === 1 ? "首次处理" : `第 ${diagnostics.attemptNumber} 次处理`}</dd>
         </div>
         <div>
-          <dt>origin task</dt>
-          <dd>{diagnostics.originTaskId}</dd>
-        </div>
-        <div>
-          <dt>当前 attempt</dt>
-          <dd>第 {diagnostics.attemptNumber} 次</dd>
-        </div>
-        <div>
-          <dt>预设决策</dt>
-          <dd>{diagnostics.presetResolution}</dd>
+          <dt>预设处理方式</dt>
+          <dd>{formatPresetResolution(diagnostics.presetResolution)}</dd>
         </div>
       </dl>
 
@@ -53,10 +60,6 @@ export function TaskSupportDiagnosticsCard({
               <span>{formatTaskDate(entry.occurredAt)}</span>
             </div>
             <p>{entry.detail}</p>
-            <div className="feedback-meta">
-              <span>kind: {entry.kind}</span>
-              <span>request_id: {entry.requestId}</span>
-            </div>
           </article>
         ))}
       </div>

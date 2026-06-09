@@ -27,12 +27,11 @@ function PresetFeedback({
   if (result.ok) {
     return (
       <section className="inline-feedback inline-feedback-success" aria-live="polite">
-        <p className="feedback-title">Preset Saved</p>
+        <p className="feedback-title">预设已保存</p>
         <h3>{result.mode === "created" ? "频道预设已创建" : "频道预设已更新"}</h3>
         <p>{result.preset.displayName} 将作为后续熟悉来源任务的默认规则来源。</p>
         <div className="feedback-meta">
           <span>{result.preset.summary}</span>
-          <span>request_id: {result.requestId}</span>
         </div>
       </section>
     );
@@ -40,13 +39,9 @@ function PresetFeedback({
 
   return (
     <section className="inline-feedback inline-feedback-error" aria-live="polite">
-      <p className="feedback-title">Preset Error</p>
+      <p className="feedback-title">预设未保存</p>
       <h3>频道预设未保存</h3>
       <p>{result.message}</p>
-      <div className="feedback-meta">
-        <span>code: {result.code}</span>
-        <span>request_id: {result.request_id}</span>
-      </div>
     </section>
   );
 }

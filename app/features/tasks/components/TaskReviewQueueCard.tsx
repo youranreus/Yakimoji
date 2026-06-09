@@ -33,7 +33,7 @@ export function TaskReviewQueueCard({ task }: TaskReviewQueueCardProps) {
     <section className="task-detail-callout task-review-card" aria-labelledby="task-review-title">
       <div className="task-detail-section-heading">
         <div>
-          <p className="eyebrow">Review Queue</p>
+          <p className="eyebrow">人工确认</p>
           <h3 id="task-review-title">低置信度人工确认</h3>
         </div>
         <p className="task-panel-copy">
@@ -45,25 +45,17 @@ export function TaskReviewQueueCard({ task }: TaskReviewQueueCardProps) {
 
       {fetcher.data && fetcher.data.ok === false ? (
         <section className="inline-feedback inline-feedback-error" aria-live="polite">
-          <p className="feedback-title">Review Error</p>
+          <p className="feedback-title">提交未成功</p>
           <h4>当前确认未提交成功</h4>
           <p>{fetcher.data.message}</p>
-          <div className="feedback-meta">
-            <span>code: {fetcher.data.code}</span>
-            <span>request_id: {fetcher.data.request_id}</span>
-          </div>
         </section>
       ) : null}
 
       {fetcher.data && fetcher.data.ok ? (
         <section className="inline-feedback inline-feedback-success" aria-live="polite">
-          <p className="feedback-title">Review Saved</p>
+          <p className="feedback-title">已提交确认</p>
           <h4>人工确认已提交</h4>
           <p>已提交 {fetcher.data.resolvedCount} 个片段的确认结果，详情正在刷新。</p>
-          <div className="feedback-meta">
-            <span>task_id: {fetcher.data.taskId}</span>
-            <span>request_id: {fetcher.data.requestId}</span>
-          </div>
         </section>
       ) : null}
 

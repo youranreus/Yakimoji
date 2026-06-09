@@ -45,30 +45,22 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Yakimoji workspace error";
-  let details = "An unexpected error occurred while loading the workspace shell.";
+  let message = "页面暂时不可用";
+  let details = "请稍后重试。";
   let stack: string | undefined;
-  let requestId: string | undefined;
   let debugCause: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Request error";
+    message = error.status === 404 ? "页面不存在" : "页面暂时不可用";
     details =
       error.status === 404
-        ? "The requested route does not exist."
+        ? "你访问的页面不存在或链接已失效。"
         : (typeof error.data === "object" &&
             error.data &&
             "message" in error.data &&
             typeof error.data.message === "string"
             ? error.data.message
             : error.statusText || details);
-    requestId =
-      typeof error.data === "object" &&
-      error.data &&
-      "request_id" in error.data &&
-      typeof error.data.request_id === "string"
-        ? error.data.request_id
-        : undefined;
     debugCause =
       import.meta.env.DEV &&
       typeof error.data === "object" &&
@@ -88,11 +80,10 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   return (
     <main className="app-shell error-shell">
       <div className="shell-panel">
-        <p className="eyebrow">System State</p>
+        <p className="eyebrow">页面异常</p>
         <h1>{message}</h1>
         <p>{details}</p>
         {debugCause ? <p>cause: {debugCause}</p> : null}
-        {requestId ? <p>request_id: {requestId}</p> : null}
         {stack ? <pre>{stack}</pre> : null}
       </div>
     </main>

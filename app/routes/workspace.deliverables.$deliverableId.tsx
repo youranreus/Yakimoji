@@ -42,14 +42,6 @@ export function ErrorBoundary() {
   const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
-    const requestId =
-      typeof error.data === "object" &&
-      error.data &&
-      "request_id" in error.data &&
-      typeof error.data.request_id === "string"
-        ? error.data.request_id
-        : "req_unavailable";
-
     return (
       <main className="app-shell auth-shell">
         <section className="shell-panel auth-card">
@@ -70,7 +62,6 @@ export function ErrorBoundary() {
               ? String(error.data.message)
               : "交付物下载失败。"}
           </p>
-          <div className="request-chip">request_id: {requestId}</div>
         </section>
       </main>
     );

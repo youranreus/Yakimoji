@@ -415,7 +415,7 @@ function getNextStepLabel(status: TaskStatus) {
     case "completed":
       return "可继续查看交付结果与后续状态";
     case "failed":
-      return "请结合 request_id 和失败说明排查原因";
+      return "请查看失败原因与建议动作后再继续处理";
     case "cancelled":
       return "如需继续处理，请重新创建任务";
   }
@@ -905,7 +905,7 @@ export async function getTaskDetailForSupport(taskId: string): Promise<TaskDetai
     nextStepLabel: getNextStepLabel(task.status),
     resultStatus: {
       label: "诊断视图",
-      description: "当前视图仅用于支持排障，不提供交付物访问入口。",
+      description: "当前页面用于查看任务进度、异常原因和处理记录。",
       tone: "neutral",
     },
     accessMode: "support",

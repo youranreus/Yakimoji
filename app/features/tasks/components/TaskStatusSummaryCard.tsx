@@ -59,10 +59,6 @@ export function TaskStatusSummaryCard({
           <dd>{formatTaskDate(task.updatedAt)}</dd>
         </div>
       </dl>
-
-      {task.requestId ? (
-        <div className="request-chip">request_id: {task.requestId}</div>
-      ) : null}
     </section>
   );
 }

@@ -15,9 +15,7 @@ export function TaskDetailTimeline({
           <p className="eyebrow">Stage Timeline</p>
           <h3 id="task-timeline-title">流程阶段时间线</h3>
         </div>
-        <p className="task-panel-copy">
-          先回答“当前在哪一步、刚发生了什么、接下来会做什么”，异常时再展开追踪信息。
-        </p>
+        <p className="task-panel-copy">按时间查看任务进展与最近变化。</p>
       </div>
 
       <ol className="task-stage-track">
@@ -45,8 +43,6 @@ export function TaskDetailTimeline({
             <p>{event.description}</p>
             <div className="feedback-meta">
               <span>状态: {event.statusLabel}</span>
-              <span>request_id: {event.requestId}</span>
-              {event.reasonCode ? <span>reason: {event.reasonCode}</span> : null}
             </div>
           </article>
         ))}

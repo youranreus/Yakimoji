@@ -70,8 +70,6 @@ export function TaskDeliverablesCard({ task }: TaskDeliverablesCardProps) {
           ))}
         </div>
       )}
-
-      <div className="request-chip">交付物访问会写入审计记录</div>
     </section>
   );
 }

@@ -17,7 +17,7 @@ export function meta({}: Route.MetaArgs) {
     { title: "Yakimoji Workspace" },
     {
       name: "description",
-      content: "受保护的创作者工作台壳层，承载登录态、导航和主内容区。",
+      content: "Yakimoji 创作者工作台。",
     },
   ];
 }
@@ -62,14 +62,6 @@ export function ErrorBoundary() {
   const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
-    const requestId =
-      typeof error.data === "object" &&
-      error.data &&
-      "request_id" in error.data &&
-      typeof error.data.request_id === "string"
-        ? error.data.request_id
-        : "req_unavailable";
-
     return (
       <main className="app-shell auth-shell">
         <section className="shell-panel auth-card">
@@ -93,7 +85,6 @@ export function ErrorBoundary() {
               </button>
             </Form>
           ) : null}
-          <div className="request-chip">request_id: {requestId}</div>
         </section>
       </main>
     );

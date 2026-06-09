@@ -62,13 +62,11 @@ export function TaskListPanel({
           <p className="eyebrow">Task List</p>
           <h2 id="task-list-title">任务列表</h2>
         </div>
-        <p className="task-panel-copy">
-          仅按页读取任务摘要与最近关键进展，不在列表页预取完整事件账本。
-        </p>
+        <p className="task-panel-copy">按页查看任务和最近进展。</p>
       </div>
 
       <p className="task-loading-copy" aria-live="polite">
-        {pendingMessage ?? "可用键盘逐项浏览任务，回车进入可直达的详情页。"}
+        {pendingMessage ?? "可逐项查看任务并进入详情页。"}
       </p>
 
       {taskList.data.length === 0 ? (

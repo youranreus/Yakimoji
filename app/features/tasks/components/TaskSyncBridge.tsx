@@ -30,24 +30,24 @@ function getSyncCopy(state: SyncState) {
   switch (state) {
     case "live":
       return {
-        title: "正在同步",
-        body: "任务列表和详情会通过 SSE 事件触发受控刷新。",
+        title: "自动刷新已开启",
+        body: "任务列表和详情会在有新进展时自动更新。",
       };
     case "polling":
       return {
-        title: "已回退轮询",
-        body: "当前环境未维持 SSE，系统改用最小状态摘要轮询。",
+        title: "自动刷新进行中",
+        body: "当前正在定时检查最新进度。",
       };
     case "retrying":
       return {
-        title: "连接断开，正在重试",
-        body: "同步层会继续尝试恢复 SSE，同时避免在组件内维护第二套状态。",
+        title: "连接已中断，正在重试",
+        body: "页面会自动继续获取最新进度。",
       };
     case "connecting":
     default:
       return {
-        title: "正在建立同步",
-        body: "系统正在准备状态同步通道。",
+        title: "正在连接",
+        body: "页面正在准备获取最新进度。",
       };
   }
 }
@@ -217,11 +217,11 @@ export function TaskSyncBridge({
       <section className="shell-panel task-sync-status" aria-live="polite">
         <div className="task-sync-status-topline">
           <div>
-            <p className="eyebrow">Live Sync</p>
+            <p className="eyebrow">任务同步</p>
             <h2>{syncCopy.title}</h2>
           </div>
           <span className={`status-pill status-pill-${transport === "sse" ? "info" : "warning"}`}>
-            {transport === "sse" ? "SSE 优先" : "轮询兜底"}
+            {transport === "sse" ? "实时更新" : "定时刷新"}
           </span>
         </div>
         <p className="task-panel-copy">{syncCopy.body}</p>

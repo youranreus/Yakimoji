@@ -12,7 +12,7 @@ export function meta({}: Route.MetaArgs) {
     { title: "Yakimoji Task Detail" },
     {
       name: "description",
-      content: "创作者任务详情页，展示阶段时间线、状态账本和最近关键进展。",
+      content: "查看任务进度、结果和处理记录。",
     },
   ];
 }
@@ -46,14 +46,6 @@ export function ErrorBoundary() {
   const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
-    const requestId =
-      typeof error.data === "object" &&
-      error.data &&
-      "request_id" in error.data &&
-      typeof error.data.request_id === "string"
-        ? error.data.request_id
-        : "req_unavailable";
-
     return (
       <main className="app-shell auth-shell">
         <section className="shell-panel auth-card">
@@ -72,7 +64,6 @@ export function ErrorBoundary() {
               ? String(error.data.message)
               : "任务详情加载失败。"}
           </p>
-          <div className="request-chip">request_id: {requestId}</div>
         </section>
       </main>
     );

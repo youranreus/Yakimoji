@@ -31,8 +31,8 @@ export function TaskDetailPanel({
         </div>
         <p className="task-loading-copy" aria-live="polite">
           {pendingDetail
-            ? "正在加载任务详情与状态账本..."
-            : "详情页会展示当前阶段、最近进展和按时间排序的状态账本。"}
+            ? "正在加载任务详情..."
+            : "查看当前阶段、最近进展和处理记录。"}
         </p>
       </div>
 
@@ -50,10 +50,8 @@ export function TaskDetailPanel({
         </div>
       ) : (
         <section className="task-empty-state" aria-live="polite">
-          <h3>选择一个任务查看状态账本</h3>
-          <p>
-            任务详情支持直达、分享和刷新。你可以从左侧列表进入某个任务，查看当前阶段、可交付结果和完整时间线。
-          </p>
+          <h3>选择一个任务查看详情</h3>
+          <p>从左侧列表进入任务，查看进度、结果和处理记录。</p>
         </section>
       )}
     </article>

@@ -15,17 +15,17 @@ test("workspace shell copy still exposes the protected workspace and task detail
   const taskDetailPanel = readText("app/features/tasks/components/TaskDetailPanel.tsx");
   const taskSyncBridge = readText("app/features/tasks/components/TaskSyncBridge.tsx");
 
-  assert.match(workspaceShell, /Protected Workspace/);
-  assert.match(workspaceShell, /Global Navigation/);
-  assert.match(workspaceShell, /Main Content/);
+  assert.match(workspaceShell, /创作者工作台/);
+  assert.match(workspaceShell, /工作区导航/);
+  assert.match(workspaceShell, /开始导入/);
   assert.match(workspaceShell, /任务导入/);
-  assert.match(workspaceShell, /request_id:/);
+  assert.doesNotMatch(workspaceShell, /request_id:\s*\{/);
   assert.match(taskListPanel, /任务列表/);
   assert.match(taskListPanel, /aria-label="任务列表分页"/);
   assert.match(taskDetailPanel, /任务详情/);
-  assert.match(taskDetailPanel, /状态账本/);
-  assert.match(taskSyncBridge, /正在同步/);
-  assert.match(taskSyncBridge, /已回退轮询/);
+  assert.match(taskDetailPanel, /处理记录/);
+  assert.match(taskSyncBridge, /自动刷新已开启/);
+  assert.match(taskSyncBridge, /定时刷新/);
   assert.match(taskSyncBridge, /EventSource/);
 });
 
