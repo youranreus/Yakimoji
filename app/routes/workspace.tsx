@@ -1,4 +1,4 @@
-import { isRouteErrorResponse, useRouteError } from "react-router";
+import { Form, isRouteErrorResponse, useRouteError } from "react-router";
 
 import type { Route } from "./+types/workspace";
 import {
@@ -86,6 +86,13 @@ export function ErrorBoundary() {
               ? String(error.data.message)
               : "受保护工作台加载失败。"}
           </p>
+          {error.status === 403 ? (
+            <Form method="post" action="/logout">
+              <button className="secondary-action" type="submit">
+                退出当前账号并重新登录
+              </button>
+            </Form>
+          ) : null}
           <div className="request-chip">request_id: {requestId}</div>
         </section>
       </main>

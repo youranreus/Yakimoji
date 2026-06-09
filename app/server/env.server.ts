@@ -5,6 +5,7 @@ type RuntimeEnvironment = {
 
 export type AuthEnvironment = {
   ssoBaseUrl: string;
+  ssoApiBaseUrl: string;
   ssoClientId: string;
   ssoClientSecret: string;
   ssoCallbackUrl: string;
@@ -42,8 +43,11 @@ export function getDatabaseUrl() {
 }
 
 export function getAuthEnvironment(): AuthEnvironment {
+  const ssoBaseUrl = getRequiredEnv("SSO_BASE_URL");
+
   return {
-    ssoBaseUrl: getRequiredEnv("SSO_BASE_URL"),
+    ssoBaseUrl,
+    ssoApiBaseUrl: process.env.SSO_API_BASE_URL || ssoBaseUrl,
     ssoClientId: getRequiredEnv("SSO_CLIENT_ID"),
     ssoClientSecret: getRequiredEnv("SSO_CLIENT_SECRET"),
     ssoCallbackUrl: getRequiredEnv("SSO_CALLBACK_URL"),

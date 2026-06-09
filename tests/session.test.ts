@@ -18,6 +18,7 @@ function installAuthEnv() {
   process.env.NODE_ENV = "test";
   process.env.SESSION_SECRET = "test-session-secret";
   process.env.SSO_BASE_URL = "https://sso.example.com";
+  process.env.SSO_API_BASE_URL = "https://sso-api.example.com";
   process.env.SSO_CLIENT_ID = "yakimoji-web";
   process.env.SSO_CLIENT_SECRET = "super-secret";
   process.env.SSO_CALLBACK_URL = "http://localhost:3000/auth/callback";
@@ -46,10 +47,11 @@ test.after(() => {
 test("session cookie uses secure server-side storage semantics", async () => {
   const setCookie = await commitSession("sess_test_cookie");
 
-  assert.match(setCookie, /__Host-yakimoji_session=/);
+  assert.match(setCookie, /yakimoji_session=/);
   assert.match(setCookie, /HttpOnly/i);
   assert.match(setCookie, /SameSite=Lax/i);
   assert.match(setCookie, /Path=\//i);
+  assert.doesNotMatch(setCookie, /Secure/i);
   assert.doesNotMatch(setCookie, /access_token/i);
 });
 
@@ -58,6 +60,10 @@ test("SSO state cookie round-trips verifier data without exposing it to the page
     state: "state-token",
     verifier: "verifier-token",
   });
+
+  assert.match(setCookie, /yakimoji_sso=/);
+  assert.doesNotMatch(setCookie, /__Host-yakimoji_sso=/);
+
   const request = new Request("http://localhost/login", {
     headers: {
       Cookie: setCookie,
@@ -97,7 +103,7 @@ test("logout invalidates the current session and clears the cookie", async () =>
       },
     }),
     destroySessionImpl: async () =>
-      "__Host-yakimoji_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax",
+      "yakimoji_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax",
     writeAuditLogImpl: async (payload) => {
       auditCalls.push(payload);
     },
@@ -116,19 +122,39 @@ test("logout invalidates the current session and clears the cookie", async () =>
 
 test("session cookie creation does not require SSO client environment variables", async () => {
   delete process.env.SSO_BASE_URL;
+  delete process.env.SSO_API_BASE_URL;
   delete process.env.SSO_CLIENT_ID;
   delete process.env.SSO_CLIENT_SECRET;
   delete process.env.SSO_CALLBACK_URL;
 
   try {
     const setCookie = await commitSession("sess_public_route");
-    assert.match(setCookie, /__Host-yakimoji_session=/);
+    assert.match(setCookie, /yakimoji_session=/);
   } finally {
     installAuthEnv();
   }
 });
 
-test("new SSO users are not auto-granted creator access unless bootstrap is explicitly enabled", async () => {
+test("production session cookie uses the __Host- prefix and Secure", async () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  process.env.NODE_ENV = "production";
+
+  try {
+    const setCookie = await commitSession("sess_prod_cookie");
+
+    assert.match(setCookie, /__Host-yakimoji_session=/);
+    assert.match(setCookie, /Secure/i);
+  } finally {
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  }
+});
+
+test("new non-admin SSO users are not auto-granted creator access unless bootstrap is explicitly enabled", async () => {
   delete process.env.AUTH_BOOTSTRAP_ROLE;
 
   const inserts: Array<{ table: string; values: unknown }> = [];
@@ -174,7 +200,7 @@ test("new SSO users are not auto-granted creator access unless bootstrap is expl
             providerUserId: "sso-user-1",
             email: "creator@example.com",
             displayName: "Creator",
-            providerRole: "1",
+            providerRole: "0",
           }),
           (error: unknown) =>
             error?.constructor?.name === "DataWithResponseInit" &&
@@ -187,4 +213,70 @@ test("new SSO users are not auto-granted creator access unless bootstrap is expl
   }
 
   assert.equal(inserts.some((entry) => entry.table === "user_role_assignments"), false);
+});
+
+test("new admin SSO users inherit creator access from provider role", async () => {
+  delete process.env.AUTH_BOOTSTRAP_ROLE;
+
+  const inserts: Array<{ table: string; values: unknown }> = [];
+  const tableNameSymbol = Symbol.for("drizzle:Name");
+  const fakeDb = {
+    select() {
+      return {
+        from() {
+          return {
+            innerJoin() {
+              return {
+                where() {
+                  return {
+                    limit: async () => [],
+                  };
+                },
+              };
+            },
+            where() {
+              return {
+                limit: async () => [],
+              };
+            },
+          };
+        },
+      };
+    },
+    insert(table: Record<PropertyKey, unknown>) {
+      return {
+        values(values: unknown) {
+          inserts.push({
+            table: typeof table[tableNameSymbol] === "string" ? String(table[tableNameSymbol]) : "unknown",
+            values,
+          });
+          return {
+            returning: async () => [{ id: 101 }],
+          };
+        },
+      };
+    },
+  };
+
+  await runWithRequestContext(createRequestContext({}), async () => {
+    await DatabaseContext.run(fakeDb as never, async () => {
+      const userId = await upsertLocalUserFromSso({
+        providerUserId: "sso-admin-1",
+        email: "admin@example.com",
+        displayName: "Admin",
+        providerRole: "1",
+      });
+
+      assert.equal(userId, 101);
+    });
+  });
+
+  assert.equal(
+    inserts.some(
+      (entry) =>
+        entry.table === "user_role_assignments" &&
+        (entry.values as { assignedBy?: string }).assignedBy === "sso-provider-role",
+    ),
+    true,
+  );
 });

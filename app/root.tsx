@@ -11,7 +11,7 @@ import type { Route } from "./+types/root";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
-  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
   {
@@ -47,6 +47,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let details = "An unexpected error occurred while loading the workspace shell.";
   let stack: string | undefined;
   let requestId: string | undefined;
+  let debugCause: string | undefined;
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "404" : "Request error";
@@ -66,6 +67,17 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       typeof error.data.request_id === "string"
         ? error.data.request_id
         : undefined;
+    debugCause =
+      import.meta.env.DEV &&
+      typeof error.data === "object" &&
+      error.data &&
+      "detail" in error.data &&
+      typeof error.data.detail === "object" &&
+      error.data.detail &&
+      "cause" in error.data.detail &&
+      typeof error.data.detail.cause === "string"
+        ? error.data.detail.cause
+        : undefined;
   } else if (import.meta.env.DEV && error instanceof Error) {
     details = error.message;
     stack = error.stack;
@@ -77,6 +89,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         <p className="eyebrow">System State</p>
         <h1>{message}</h1>
         <p>{details}</p>
+        {debugCause ? <p>cause: {debugCause}</p> : null}
         {requestId ? <p>request_id: {requestId}</p> : null}
         {stack ? <pre>{stack}</pre> : null}
       </div>

@@ -171,3 +171,55 @@ test("session environment loads without requiring SSO client settings", async ()
     else process.env.SSO_CALLBACK_URL = originalSsoCallbackUrl;
   }
 });
+
+test("auth environment supports a dedicated SSO API base URL and falls back when omitted", async () => {
+  const envModule = await envModulePromise;
+  const originalSsoBaseUrl = process.env.SSO_BASE_URL;
+  const originalSsoApiBaseUrl = process.env.SSO_API_BASE_URL;
+  const originalSsoClientId = process.env.SSO_CLIENT_ID;
+  const originalSsoClientSecret = process.env.SSO_CLIENT_SECRET;
+  const originalSsoCallbackUrl = process.env.SSO_CALLBACK_URL;
+  const originalSsoProviderName = process.env.SSO_PROVIDER_NAME;
+
+  process.env.SSO_BASE_URL = "https://sso.example.com";
+  process.env.SSO_CLIENT_ID = "yakimoji-web";
+  process.env.SSO_CLIENT_SECRET = "super-secret";
+  process.env.SSO_CALLBACK_URL = "http://localhost:3000/auth/callback";
+  process.env.SSO_PROVIDER_NAME = "yakimoji-sso";
+  process.env.SSO_API_BASE_URL = "https://sso-api.example.com";
+
+  try {
+    assert.deepEqual(envModule.getAuthEnvironment(), {
+      ssoBaseUrl: "https://sso.example.com",
+      ssoApiBaseUrl: "https://sso-api.example.com",
+      ssoClientId: "yakimoji-web",
+      ssoClientSecret: "super-secret",
+      ssoCallbackUrl: "http://localhost:3000/auth/callback",
+      ssoProviderName: "yakimoji-sso",
+    });
+
+    delete process.env.SSO_API_BASE_URL;
+
+    assert.deepEqual(envModule.getAuthEnvironment(), {
+      ssoBaseUrl: "https://sso.example.com",
+      ssoApiBaseUrl: "https://sso.example.com",
+      ssoClientId: "yakimoji-web",
+      ssoClientSecret: "super-secret",
+      ssoCallbackUrl: "http://localhost:3000/auth/callback",
+      ssoProviderName: "yakimoji-sso",
+    });
+  } finally {
+    if (originalSsoBaseUrl === undefined) delete process.env.SSO_BASE_URL;
+    else process.env.SSO_BASE_URL = originalSsoBaseUrl;
+    if (originalSsoApiBaseUrl === undefined) delete process.env.SSO_API_BASE_URL;
+    else process.env.SSO_API_BASE_URL = originalSsoApiBaseUrl;
+    if (originalSsoClientId === undefined) delete process.env.SSO_CLIENT_ID;
+    else process.env.SSO_CLIENT_ID = originalSsoClientId;
+    if (originalSsoClientSecret === undefined) delete process.env.SSO_CLIENT_SECRET;
+    else process.env.SSO_CLIENT_SECRET = originalSsoClientSecret;
+    if (originalSsoCallbackUrl === undefined) delete process.env.SSO_CALLBACK_URL;
+    else process.env.SSO_CALLBACK_URL = originalSsoCallbackUrl;
+    if (originalSsoProviderName === undefined) delete process.env.SSO_PROVIDER_NAME;
+    else process.env.SSO_PROVIDER_NAME = originalSsoProviderName;
+  }
+});

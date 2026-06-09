@@ -20,5 +20,6 @@ test("README documents startup, migrations, env vars, and out-of-scope business 
   assert.match(readme, /deliverable/i);
   assert.match(readme, /SESSION_SECRET/);
   assert.match(readme, /SSO_BASE_URL/);
+  assert.match(readme, /SSO_API_BASE_URL/);
   assert.match(readme, /\/workspace/);
 });

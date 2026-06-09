@@ -18,6 +18,7 @@ function installAuthEnv() {
   process.env.NODE_ENV = "test";
   process.env.SESSION_SECRET = "test-session-secret";
   process.env.SSO_BASE_URL = "https://sso.example.com";
+  process.env.SSO_API_BASE_URL = "https://sso-api.example.com";
   process.env.SSO_CLIENT_ID = "yakimoji-web";
   process.env.SSO_CLIENT_SECRET = "super-secret";
   process.env.SSO_CALLBACK_URL = "http://localhost:3000/auth/callback";
@@ -65,8 +66,9 @@ test("protected login flow redirects to the upstream authorize endpoint and stor
       assert.match(location, /client_id=yakimoji-web/);
       assert.match(location, /redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback/);
       assert.ok(setCookie);
-      assert.match(setCookie, /__Host-yakimoji_sso=/);
+      assert.match(setCookie, /yakimoji_sso=/);
       assert.match(setCookie, /HttpOnly/i);
+      assert.doesNotMatch(setCookie, /Secure/i);
     }
   });
 });
@@ -85,28 +87,45 @@ test("SSO callback establishes only Yakimoji session state and redirects into /w
     `http://localhost:3000/auth/callback?code=oauth-code&state=${encodedState}`,
     {
       headers: {
-        Cookie: "__Host-yakimoji_sso=mocked-cookie",
+        Cookie: "yakimoji_sso=mocked-cookie",
       },
     },
   );
 
   const originalFetch = globalThis.fetch;
+  const fetchCalls: Array<{ url: string; init?: RequestInit }> = [];
 
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+    fetchCalls.push({ url, init });
 
-    if (url.endsWith("/oauth/token")) {
+    if (url.startsWith("https://sso-api.example.com/oauth/token?")) {
       return Response.json({
-        accessToken: "upstream-token",
+        code: 0,
+        msg: "ok",
+        data: {
+          access_token: "upstream-token",
+          refresh_token: "refresh-token",
+          expires_in: 3600,
+          token_type: "Bearer",
+          scope: "openid profile email",
+        },
       });
     }
 
-    if (url.endsWith("/oauth/user")) {
+    if (url === "https://sso-api.example.com/oauth/user") {
       return Response.json({
-        id: "provider-user-1",
-        email: "creator@example.com",
-        display_name: "Yakimoji Creator",
-        role: 1,
+        code: 0,
+        msg: "ok",
+        data: {
+          id: "provider-user-1",
+          nickname: "Yakimoji Creator",
+          email: "creator@example.com",
+          role: 1,
+          avatar: null,
+          created_at: "2026-06-09T00:00:00.000Z",
+          updated_at: "2026-06-09T00:00:00.000Z",
+        },
       });
     }
 
@@ -124,11 +143,11 @@ test("SSO callback establishes only Yakimoji session state and redirects into /w
       return {
         sessionId: "sess_123",
         setCookieHeader:
-          "__Host-yakimoji_session=signed-session; Path=/; HttpOnly; SameSite=Lax",
+          "yakimoji_session=signed-session; Path=/; HttpOnly; SameSite=Lax",
       };
     },
     clearSsoStateCookieImpl: async () =>
-      "__Host-yakimoji_sso=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax",
+      "yakimoji_sso=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax",
   });
 
   try {
@@ -143,10 +162,24 @@ test("SSO callback establishes only Yakimoji session state and redirects into /w
 
         const setCookies = error.headers.getSetCookie();
         assert.equal(setCookies.length, 2);
-        assert.match(setCookies[0] ?? "", /__Host-yakimoji_session=/);
-        assert.match(setCookies[1] ?? "", /__Host-yakimoji_sso=;/);
+        assert.match(setCookies[0] ?? "", /yakimoji_session=/);
+        assert.match(setCookies[1] ?? "", /yakimoji_sso=;/);
         assert.doesNotMatch(setCookies.join("\n"), /upstream-token/);
         assert.equal(error.headers.get("X-Request-Id")?.startsWith("req_"), true);
+        assert.equal(fetchCalls.length, 2);
+        assert.match(
+          fetchCalls[0]?.url ?? "",
+          /^https:\/\/sso-api\.example\.com\/oauth\/token\?/,
+        );
+        assert.equal(fetchCalls[0]?.init?.body, undefined);
+        assert.match(fetchCalls[0]?.url ?? "", /client_id=yakimoji-web/);
+        assert.match(fetchCalls[0]?.url ?? "", /client_secret=super-secret/);
+        assert.match(fetchCalls[0]?.url ?? "", /code=oauth-code/);
+        assert.match(
+          fetchCalls[0]?.url ?? "",
+          /redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback/,
+        );
+        assert.equal(fetchCalls[1]?.url, "https://sso-api.example.com/oauth/user");
       }
     });
   } finally {
@@ -158,7 +191,7 @@ test("SSO callback establishes only Yakimoji session state and redirects into /w
 test("SSO callback failures return structured responses with request_id", async () => {
   const request = new Request("http://localhost:3000/auth/callback?code=oauth-code&state=bad-state", {
     headers: {
-      Cookie: "__Host-yakimoji_sso=mocked-cookie",
+      Cookie: "yakimoji_sso=mocked-cookie",
       "x-request-id": "req_auth_failure",
     },
   });

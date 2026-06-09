@@ -19,8 +19,6 @@ import { getRequestContext } from "./request-context.server";
 import { writeAuditLog } from "./audit.server";
 import type { SsoUser } from "./sso-adapter.server";
 
-const SESSION_COOKIE_NAME = "__Host-yakimoji_session";
-const SSO_STATE_COOKIE_NAME = "__Host-yakimoji_sso";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 12;
 
 type SessionCookiePayload = {
@@ -56,8 +54,18 @@ function secureCookie() {
   return getSessionEnvironment().cookieSecure;
 }
 
+function getCookieName(kind: "session" | "ssoState") {
+  const secure = secureCookie();
+
+  if (kind === "session") {
+    return secure ? "__Host-yakimoji_session" : "yakimoji_session";
+  }
+
+  return secure ? "__Host-yakimoji_sso" : "yakimoji_sso";
+}
+
 function getSessionCookie() {
-  return createCookie(SESSION_COOKIE_NAME, {
+  return createCookie(getCookieName("session"), {
     httpOnly: true,
     secure: secureCookie(),
     sameSite: "lax",
@@ -67,7 +75,7 @@ function getSessionCookie() {
 }
 
 function getSsoStateCookie() {
-  return createCookie(SSO_STATE_COOKIE_NAME, {
+  return createCookie(getCookieName("ssoState"), {
     httpOnly: true,
     secure: secureCookie(),
     sameSite: "lax",
@@ -79,6 +87,40 @@ function getSsoStateCookie() {
 
 function expirationDate() {
   return new Date(Date.now() + SESSION_DURATION_MS);
+}
+
+function shouldGrantCreatorRoleFromSso(ssoUser: SsoUser) {
+  return ssoUser.providerRole === "1" || process.env.AUTH_BOOTSTRAP_ROLE === "creator";
+}
+
+async function ensureCreatorRoleAssignment(userId: number, assignedBy: string) {
+  const db = database();
+  const [existingAssignment] = await db
+    .select({ role: userRoleAssignments.role })
+    .from(userRoleAssignments)
+    .where(
+      and(
+        eq(userRoleAssignments.userId, userId),
+        eq(userRoleAssignments.role, "creator"),
+        eq(userRoleAssignments.scopeType, "global"),
+        eq(userRoleAssignments.scopeId, "yakimoji"),
+      ),
+    )
+    .limit(1);
+
+  if (existingAssignment) {
+    return false;
+  }
+
+  await db.insert(userRoleAssignments).values({
+    userId,
+    role: "creator",
+    scopeType: "global",
+    scopeId: "yakimoji",
+    assignedBy,
+  });
+
+  return true;
 }
 
 export async function createSsoStateCookie(payload: SsoStatePayload) {
@@ -236,6 +278,13 @@ export async function upsertLocalUserFromSso(ssoUser: SsoUser) {
       })
       .where(eq(ssoAccounts.id, accountRecord.account.id));
 
+    if (shouldGrantCreatorRoleFromSso(ssoUser)) {
+      await ensureCreatorRoleAssignment(
+        accountRecord.user.id,
+        ssoUser.providerRole === "1" ? "sso-provider-role" : "sso-bootstrap",
+      );
+    }
+
     return accountRecord.user.id;
   }
 
@@ -255,19 +304,17 @@ export async function upsertLocalUserFromSso(ssoUser: SsoUser) {
     profile: ssoUser.profile ?? {},
   });
 
-  const bootstrapRole = process.env.AUTH_BOOTSTRAP_ROLE;
+  const shouldGrantCreatorRole = shouldGrantCreatorRoleFromSso(ssoUser);
 
-  if (bootstrapRole === "creator") {
-    await db.insert(userRoleAssignments).values({
-      userId: insertedUser.id,
-      role: "creator",
-      scopeType: "global",
-      scopeId: "yakimoji",
-      assignedBy: "sso-bootstrap",
-    });
+  if (shouldGrantCreatorRole) {
+    await ensureCreatorRoleAssignment(
+      insertedUser.id,
+      ssoUser.providerRole === "1" ? "sso-provider-role" : "sso-bootstrap",
+    );
   }
 
-  if (bootstrapRole !== "creator") {
+  if (!shouldGrantCreatorRole) {
+    const bootstrapRole = process.env.AUTH_BOOTSTRAP_ROLE;
     const { requestId } = getRequestContext();
 
     await writeAuditLog({
@@ -309,7 +356,7 @@ export async function upsertLocalUserFromSso(ssoUser: SsoUser) {
       provider: authEnvironment.ssoProviderName,
       providerUserId: ssoUser.providerUserId,
       providerRole: ssoUser.providerRole ?? null,
-      bootstrapRole: bootstrapRole ?? null,
+      bootstrapRole: process.env.AUTH_BOOTSTRAP_ROLE ?? null,
     },
   });
 

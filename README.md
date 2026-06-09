@@ -40,6 +40,8 @@ Story 1.2 在保留 `starter_health_checks` 的基础上，新增了认证与审
 
 浏览器 cookie 只保存 Yakimoji 本地 session 标识；真实 session 状态、角色判定与审计记录都持久化在服务端和数据库中。
 
+本地 `http://localhost` 开发环境不会使用 `__Host-` cookie 前缀，因为浏览器只接受带 `Secure` 标记的 `__Host-` cookie；生产环境启用 HTTPS 后会自动切换到 `__Host-` 前缀。
+
 常用命令：
 
 ```bash
@@ -62,7 +64,8 @@ postgres://postgres:postgres@localhost:5432/yakimoji
 | `NODE_ENV` | 运行环境，默认 `development` | 否 |
 | `DATABASE_URL` | PostgreSQL 连接串，Drizzle 与服务端都会读取 | 是 |
 | `SESSION_SECRET` | Yakimoji 本地 session / SSO state cookie 签名密钥 | 是 |
-| `SSO_BASE_URL` | 上游 SSO 服务基础地址，服务端会调用 `/oauth/authorize`、`/oauth/token`、`/oauth/user` | 是 |
+| `SSO_BASE_URL` | 上游 SSO 前台授权地址，浏览器会跳转到这个地址的 `/oauth/authorize` | 是 |
+| `SSO_API_BASE_URL` | 上游 SSO API 地址，服务端会调用这个地址的 `/oauth/token`、`/oauth/user`；未设置时回退到 `SSO_BASE_URL` | 否 |
 | `SSO_CLIENT_ID` | SSO client id | 是 |
 | `SSO_CLIENT_SECRET` | SSO client secret | 是 |
 | `SSO_CALLBACK_URL` | Yakimoji SSO 回调地址，默认 `http://localhost:3000/auth/callback` | 是 |

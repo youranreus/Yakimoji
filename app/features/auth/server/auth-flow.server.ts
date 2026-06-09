@@ -55,7 +55,8 @@ function getSsoEnvironment() {
 
   return {
     providerName: environment.ssoProviderName,
-    baseUrl: environment.ssoBaseUrl,
+    authorizeBaseUrl: environment.ssoBaseUrl,
+    apiBaseUrl: environment.ssoApiBaseUrl,
     clientId: environment.ssoClientId,
     clientSecret: environment.ssoClientSecret,
     callbackUrl: environment.ssoCallbackUrl,
