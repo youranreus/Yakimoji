@@ -68,3 +68,44 @@ export async function requireRole(
     },
   );
 }
+
+export async function requireAnyRole(
+  authenticatedSession: AuthenticatedSession,
+  rolesToAllow: AllowedRole[],
+  resource: { type: string; id: string },
+) {
+  const roles = await getUserRolesImpl(authenticatedSession.user.id);
+
+  if (rolesToAllow.some((role) => roles.includes(role))) {
+    return roles;
+  }
+
+  const { requestId } = getRequestContext();
+
+  await writeAuditLogImpl({
+    actorUserId: authenticatedSession.user.id,
+    actorSessionId: authenticatedSession.session.id,
+    eventType: "authorization.denied",
+    resourceType: resource.type,
+    resourceId: resource.id,
+    outcome: "forbidden",
+    detail: {
+      requiredAnyRole: rolesToAllow,
+      actualRoles: roles,
+    },
+  });
+
+  throw data(
+    {
+      code: "forbidden",
+      message: "当前账号没有访问该工作区的权限。",
+      request_id: requestId,
+    },
+    {
+      status: 403,
+      headers: {
+        "X-Request-Id": requestId,
+      },
+    },
+  );
+}

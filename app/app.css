@@ -1018,6 +1018,210 @@ body {
   color: var(--muted);
 }
 
+.operations-shell {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.operations-hero-grid {
+  grid-template-columns: minmax(0, 1.9fr) minmax(18rem, 0.9fr);
+}
+
+.operations-scope-note {
+  margin-top: 1rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.operations-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.operations-nav-link {
+  border-radius: 999px;
+  border: 1px solid rgba(143, 78, 23, 0.18);
+  padding: 0.55rem 0.9rem;
+  color: var(--ink);
+  text-decoration: none;
+  background: rgba(255, 252, 246, 0.7);
+}
+
+.operations-nav-link-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.operations-hero-meta {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.operations-meta-list {
+  margin: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.operations-meta-list div {
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(143, 78, 23, 0.12);
+  background: rgba(255, 252, 246, 0.86);
+}
+
+.operations-meta-list dt {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.operations-meta-list dd {
+  margin: 0.35rem 0 0;
+  font-weight: 600;
+}
+
+.operations-metric-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.operations-metric-card {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.operations-metric-card h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.operations-metric-card-good {
+  background:
+    linear-gradient(180deg, rgba(231, 255, 243, 0.92), rgba(255, 252, 246, 0.92)),
+    var(--panel);
+}
+
+.operations-metric-card-warning {
+  background:
+    linear-gradient(180deg, rgba(255, 245, 228, 0.96), rgba(255, 252, 246, 0.92)),
+    var(--panel);
+}
+
+.operations-metric-value {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.operations-metric-supporting,
+.operations-metric-explanation,
+.operations-empty-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.operations-drilldown-link,
+.operations-source-row {
+  color: inherit;
+  text-decoration: none;
+}
+
+.operations-drilldown-link {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.operations-lower-grid {
+  grid-template-columns: minmax(17rem, 0.92fr) minmax(0, 1.5fr);
+}
+
+.operations-source-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.operations-source-row {
+  display: grid;
+  gap: 0.9rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(143, 78, 23, 0.12);
+  padding: 1rem;
+  background: rgba(255, 252, 246, 0.85);
+}
+
+.operations-source-title,
+.operations-task-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.operations-source-subtitle,
+.operations-task-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.operations-source-meta {
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.operations-source-meta div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.operations-source-meta dt {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.operations-source-meta dd {
+  margin: 0;
+}
+
+.operations-drilldown-actions {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: end;
+}
+
+.operations-reset-link {
+  text-decoration: none;
+}
+
+.operations-table-wrapper {
+  overflow-x: auto;
+}
+
+.operations-task-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.operations-task-table th,
+.operations-task-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.95rem 0.8rem;
+  border-bottom: 1px solid rgba(41, 37, 36, 0.08);
+}
+
+.operations-task-table th {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.operations-task-cell {
+  min-width: 12rem;
+}
+
 .task-empty-state h3 {
   margin: 0 0 0.5rem;
   font-family: "Iowan Old Style", "Times New Roman", serif;
@@ -1203,6 +1407,7 @@ pre {
 
   .workspace-top-grid,
   .workspace-bottom-grid,
+  .operations-lower-grid,
   .intake-grid,
   .preview-ledger,
   .preset-grid,
@@ -1262,12 +1467,22 @@ pre {
     flex-direction: column;
     align-items: stretch;
   }
+
+  .operations-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .operations-drilldown-actions {
+    justify-items: start;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1023.98px) {
   .workspace-top-grid,
   .workspace-bottom-grid,
-  .shell-hero-grid {
+  .shell-hero-grid,
+  .operations-lower-grid,
+  .operations-hero-grid {
     grid-template-columns: 1fr;
   }
 
