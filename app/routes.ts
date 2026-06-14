@@ -14,6 +14,7 @@ export default [
   ),
   route("workspace", "routes/workspace.tsx"),
   route("workspace/tasks/:taskId", "routes/workspace.task-detail.tsx"),
+  route("tasks/:taskId/audit", "routes/tasks.$taskId.audit.tsx"),
   route("workspace/deliverables/:deliverableId", "routes/workspace.deliverables.$deliverableId.tsx"),
   route("workspace/task-sync", "routes/workspace.task-sync.ts"),
   route("operations", "routes/operations.tsx"),
