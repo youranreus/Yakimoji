@@ -243,6 +243,10 @@ FR50: Epic 6 - 提供最小审计记录供运营支持排障使用
 运营/管理角色可以衡量预设复用与未命中情况，并通过审计记录追踪任务生命周期中的关键事件。
 **FRs covered:** FR45, FR46, FR47, FR48, FR49, FR50
 
+### Epic 7: Product Information Architecture and Preset Editing Refactor
+在保留 Epic 1-6 已交付能力闭环的前提下，重构登录后产品的信息架构与路由边界，使 workspace 回归总览入口，并将任务、预设、详情、创建与编辑流程拆分为清晰、可寻址、可维护的页面或等价 UI 状态边界。
+**FRs covered:** FR8, FR9, FR13, FR14, FR17, FR20, FR22, FR37
+
 <!-- Repeat for each epic in epics_list (N = 1, 2, 3...) -->
 
 ## Epic 1: Secure Creator Workspace and First Delivered Task
@@ -1156,3 +1160,131 @@ So that 我能复盘任务发生过什么并支撑解释、排障与恢复。
 **When** 页面或接口展示这些内容
 **Then** 记录必须以结构化、可读的方式呈现
 **And** 不得要求用户直接解析底层原始日志才能理解任务发生过什么
+
+## Epic 7: Product Information Architecture and Preset Editing Refactor
+
+Epic 1-6 已实现 Yakimoji 的主要能力闭环，但当前前端实现把任务入口、任务列表、任务详情、预设列表、预设编辑和创建动作集中在 workspace 页面，导致产品信息架构不清、路由职责不稳定，并削弱了频道预设作为核心资产的编辑与预览体验。
+
+本 Epic 不推翻既有业务能力，也不重写已完成 story 的历史语义。它作为交付后的纠偏 Epic，目标是在现有能力基础上重构产品承载方式：workspace 只承担工作入口和总览职责，任务与预设进入独立路由体系，预设编辑页提供模拟播放器和字幕样式预览，使后续维护、移动端适配和功能扩展建立在清晰边界上。
+
+### Story 7.1: Workspace Overview and Object Route Boundary Refactor
+
+As a 创作者,
+I want workspace 只作为工作入口展示关键概览与入口,
+So that 我不会在一个页面里被任务、预设、详情和创建流程混在一起干扰。
+
+**Acceptance Criteria:**
+
+**Given** 创作者进入 workspace
+**When** 页面加载
+**Then** 页面应展示基础工作状态、运行中任务 banner、任务列表预览与入口、任务创建入口、预设列表预览与入口
+**And** 不应在此页面展开完整任务详情、完整预设编辑表单或复杂异常处理流程
+
+**Given** 创作者需要查看完整任务列表
+**When** 触发任务入口
+**Then** 系统应导航到独立任务列表路由
+**And** 不应在 workspace 内展开完整任务管理
+
+**Given** 创作者需要查看或管理预设
+**When** 触发预设入口
+**Then** 系统应导航到独立预设列表路由
+**And** 不应依赖 workspace 锚点或内嵌面板作为唯一正式入口
+
+**Given** workspace 加载数据
+**When** loader 执行
+**Then** 它只应加载总览所需摘要数据
+**And** 不应同时承担任务详情和完整预设编辑数据
+
+### Story 7.2: Task List, Task Detail, and Task Creation Route Split
+
+As a 创作者,
+I want 任务列表、任务详情和任务创建有清晰入口,
+So that 我可以按任务链路连续操作，而不是在 workspace 中寻找隐藏面板。
+
+**Acceptance Criteria:**
+
+**Given** 创作者需要浏览历史和运行中的任务
+**When** 进入任务列表
+**Then** 页面应提供独立任务列表路由
+**And** 支持分页、状态摘要和进入详情
+
+**Given** 创作者需要查看单个任务完整上下文
+**When** 打开任务详情
+**Then** 任务详情应拥有独立路由或可寻址弹窗状态
+**And** 展示状态、来源、时间线、交付物和异常信息
+
+**Given** 创作者需要发起新任务
+**When** 进入任务创建流程
+**Then** 任务创建应拥有独立路由或可寻址弹窗状态
+**And** 承接 YouTube 链接、上传、来源识别、预设命中确认和任务级轻量覆盖
+
+**Given** 任务创建或任务详情发生 mutation
+**When** action 执行
+**Then** 任务创建和任务详情 action 不应继续挂在 workspace action 中
+**And** 应归属 tasks 路由族
+
+### Story 7.3: Preset List, Preset Detail, and Preset Edit Route Split
+
+As a 创作者,
+I want 预设列表、预设详情和预设编辑有独立承载界面,
+So that 频道预设能作为长期资产被清楚查看、维护和复用。
+
+**Acceptance Criteria:**
+
+**Given** 创作者需要查看当前已配置的频道预设
+**When** 进入预设管理
+**Then** 预设列表应拥有独立路由
+**And** 展示已配置预设摘要和创建入口
+
+**Given** 创作者打开某个预设
+**When** 进入详情
+**Then** 预设详情应支持只读预览
+**And** 展示来源频道、默认翻译方向、字幕模板、输出偏好和样式效果摘要
+
+**Given** 创作者需要修改已有预设
+**When** 进入编辑
+**Then** 预设编辑应拥有独立路由或可寻址弹窗状态
+**And** 承接预设基础信息和字幕样式配置
+
+**Given** 预设创建或更新发生 mutation
+**When** action 执行
+**Then** 预设创建、更新 action 不应继续挂在 workspace action 中
+**And** 应归属 presets 路由族
+
+**Given** 创作者越权访问他人预设
+**When** 系统执行授权检查
+**Then** 必须返回 403 或 404
+**And** 不得因详情页或编辑页拆分而放宽授权边界
+
+### Story 7.4: Subtitle Style Preview with Simulated Player
+
+As a 创作者,
+I want 在预设编辑中通过模拟播放器预览字幕样式,
+So that 我能在保存前直观看到当前预设实际会产生的字幕效果。
+
+**Acceptance Criteria:**
+
+**Given** 创作者进入预设编辑页
+**When** 页面加载预设样式配置
+**Then** 页面必须包含模拟播放器区域
+**And** 用于展示当前字幕样式在视频画面中的实际效果
+
+**Given** 创作者调整字体大小、字幕模板等允许范围内的样式配置
+**When** 配置变化
+**Then** 预览应同步反映变化
+**And** 用户不需要离开编辑上下文即可观察效果
+
+**Given** 创作者查看只读详情页
+**When** 页面展示字幕样式效果
+**Then** 预览必须明确区分只读详情模式和可编辑模式
+**And** 详情页不能直接修改配置
+
+**Given** 页面承载模拟播放器与字幕样式预览
+**When** 设计和实现该能力
+**Then** 它必须保持在第一阶段边界内
+**And** 不扩展成逐句字幕编辑器或复杂视频编辑器
+
+**Given** 不同字幕模板或样式产生差异
+**When** 用户查看预览
+**Then** 字幕预览差异必须提供文本辅助说明
+**And** 不能只依赖视觉差异表达
