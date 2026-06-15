@@ -20,6 +20,7 @@ import {
   getChannelPresetByIdForUser,
   type ChannelPresetView,
 } from "../../presets/server/channel-presets.server";
+import { defaultPresetFormValues } from "../../presets/preset-form.shared";
 
 import { getDefaultProcessingBaseline } from "./task-baseline.server";
 import {
@@ -723,6 +724,12 @@ export async function confirmTaskCreation(
         presetFormData.set(field, value);
       }
     }
+
+    presetFormData.set(
+      "previewFontSize",
+      String(defaultPresetFormValues.previewFontSize),
+    );
+    presetFormData.set("previewTheme", defaultPresetFormValues.previewTheme);
 
     let createdPreset: ChannelPresetView;
 

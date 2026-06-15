@@ -4,16 +4,11 @@ import type {
   ChannelPresetActionResult,
   ChannelPresetView,
 } from "../server/channel-presets.server";
+import { defaultPresetFormValues } from "../preset-form.shared";
 
 type ChannelPresetWorkbenchProps = {
   mode: "workspace" | "list" | "create";
   presets: ChannelPresetView[];
-};
-
-const defaultValues = {
-  translationMode: "中译中字幕",
-  subtitleTemplate: "标准 Shorts 模板",
-  outputPackage: "mp4 + srt",
 };
 
 function formatPresetTimestamp(isoString: string) {
@@ -81,6 +76,14 @@ function PresetRow({ preset }: { preset: ChannelPresetView }) {
         </div>
       </dl>
       {preset.notes ? <p className="task-card-subtitle">{preset.notes}</p> : null}
+      <div className="preset-row-actions">
+        <Link className="secondary-action" to={`/presets/${preset.id}`}>
+          查看详情
+        </Link>
+        <Link className="secondary-action" to={`/presets/${preset.id}/edit`}>
+          编辑预设
+        </Link>
+      </div>
     </section>
   );
 }
@@ -158,7 +161,7 @@ function PresetCreateForm() {
           <input
             className="text-input"
             name="translationMode"
-            defaultValue={defaultValues.translationMode}
+            defaultValue={defaultPresetFormValues.translationMode}
             required
           />
           {createFetcher.data && !createFetcher.data.ok && createFetcher.data.field === "translationMode" ? (
@@ -170,7 +173,7 @@ function PresetCreateForm() {
           <input
             className="text-input"
             name="subtitleTemplate"
-            defaultValue={defaultValues.subtitleTemplate}
+            defaultValue={defaultPresetFormValues.subtitleTemplate}
             required
           />
           {createFetcher.data && !createFetcher.data.ok && createFetcher.data.field === "subtitleTemplate" ? (
@@ -182,7 +185,7 @@ function PresetCreateForm() {
           <input
             className="text-input"
             name="outputPackage"
-            defaultValue={defaultValues.outputPackage}
+            defaultValue={defaultPresetFormValues.outputPackage}
             required
           />
           {createFetcher.data && !createFetcher.data.ok && createFetcher.data.field === "outputPackage" ? (
@@ -201,6 +204,16 @@ function PresetCreateForm() {
             <span className="field-error">{createFetcher.data.message}</span>
           ) : null}
         </label>
+        <input
+          type="hidden"
+          name="previewFontSize"
+          value={String(defaultPresetFormValues.previewFontSize)}
+        />
+        <input
+          type="hidden"
+          name="previewTheme"
+          value={defaultPresetFormValues.previewTheme}
+        />
         <button className="primary-action" type="submit">
           {createFetcher.state !== "idle" ? "保存中..." : "创建预设"}
         </button>
@@ -267,6 +280,9 @@ function PresetListScreen({ presets }: { presets: ChannelPresetView[] }) {
             返回工作台
           </Link>
         </div>
+        <p className="field-hint">
+          详情页用于只读确认规则，编辑页用于维护默认值与字幕预览，避免把查看和修改混在同一块工作台里。
+        </p>
       </section>
 
       <section className="shell-grid workspace-bottom-grid">

@@ -421,6 +421,10 @@ test("familiar source preview applies a matched channel preset baseline and pers
         outputPackage: "mp4 + srt",
       },
       notes: null,
+      previewStyle: {
+        fontSize: 52,
+        theme: "cinema",
+      },
       createdAt: "2026-05-27T00:00:00.000Z",
       updatedAt: "2026-05-27T00:00:00.000Z",
     }),
@@ -443,6 +447,11 @@ test("familiar source preview applies a matched channel preset baseline and pers
         assert.equal(preview.mode, "preview");
         assert.equal(preview.presetMatch.status, "matched");
         assert.equal(preview.baseline.translationMode, "英译中字幕");
+        assert.deepEqual(Object.keys(preview.baseline).sort(), [
+          "outputPackage",
+          "subtitleTemplate",
+          "translationMode",
+        ]);
 
         const formData = new FormData();
         formData.set("intent", "confirm");
@@ -457,6 +466,13 @@ test("familiar source preview applies a matched channel preset baseline and pers
           subtitleTemplate: "科普模板",
           outputPackage: "mp4 + srt",
         });
+        assert.equal(
+          Object.prototype.hasOwnProperty.call(
+            fake.taskRows[0]?.processingBaselineSnapshot ?? {},
+            "previewStyle",
+          ),
+          false,
+        );
       });
     },
   );
@@ -611,7 +627,12 @@ test("manual preset creation can apply a task-level subtitle override while keep
       subtitleTemplate: String(input.subtitleTemplate),
       outputPackage: String(input.outputPackage),
       notes: input.notes ?? null,
-      metadata: {},
+      metadata: {
+        subtitleStylePreview: {
+          fontSize: input.previewFontSize,
+          theme: input.previewTheme,
+        },
+      },
       createdAt: new Date("2026-06-02T00:00:00.000Z"),
       updatedAt: new Date("2026-06-02T00:00:00.000Z"),
     }),
@@ -658,6 +679,15 @@ test("manual preset creation can apply a task-level subtitle override while keep
             }
           )?.defaults?.subtitleTemplate,
           "科普模板",
+        );
+        assert.equal(
+          (
+            fake.taskRows[0]?.presetSnapshot as {
+              defaults?: { subtitleTemplate?: string };
+              displayName?: string;
+            }
+          )?.displayName,
+          "Unknown Channel",
         );
       });
     },

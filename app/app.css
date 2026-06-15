@@ -340,6 +340,16 @@ body {
   gap: 1rem;
 }
 
+.preset-row-actions,
+.preset-detail-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.preset-row-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .preset-row h4,
 .preset-list-card h3,
 .preset-form-card h3 {
@@ -370,6 +380,81 @@ body {
   margin: 0;
   font-weight: 600;
   line-height: 1.45;
+}
+
+.preset-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.preset-detail-field,
+.preset-preview-card {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(143, 78, 23, 0.12);
+  background: rgba(255, 252, 246, 0.9);
+  padding: 1.1rem 1.15rem;
+}
+
+.preset-detail-field h3,
+.preset-preview-card h3 {
+  margin: 0;
+  font-family: "Iowan Old Style", "Times New Roman", serif;
+}
+
+.preset-preview-surface {
+  margin-top: 1rem;
+  border-radius: 1.1rem;
+  padding: 1rem;
+}
+
+.preset-preview-surface-classic {
+  background: linear-gradient(180deg, rgba(43, 48, 61, 0.96), rgba(17, 18, 24, 0.98));
+}
+
+.preset-preview-surface-cinema {
+  background: linear-gradient(180deg, rgba(18, 33, 48, 0.95), rgba(7, 14, 25, 0.98));
+}
+
+.preset-preview-surface-high-contrast {
+  background: linear-gradient(180deg, rgba(18, 18, 18, 0.98), rgba(0, 0, 0, 1));
+}
+
+.preset-preview-player {
+  min-height: 18rem;
+  border-radius: 0.95rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+}
+
+.preset-preview-chrome {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: rgba(255, 244, 230, 0.82);
+  font-size: 0.85rem;
+}
+
+.preset-preview-caption {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+}
+
+.preset-preview-caption span {
+  max-width: 24rem;
+  color: #fff6df;
+  font-weight: 700;
+  line-height: 1.35;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.86),
+    0 0 18px rgba(0, 0, 0, 0.35);
 }
 
 .preset-edit-form {
@@ -466,6 +551,11 @@ body {
 .status-pill-success {
   background: rgba(37, 99, 69, 0.14);
   color: #1f6a46;
+}
+
+.status-pill-neutral {
+  background: rgba(143, 78, 23, 0.12);
+  color: #7b4f20;
 }
 
 .mini-panel {

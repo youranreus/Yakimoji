@@ -19,6 +19,8 @@ export default [
   route("workspace/task-sync", "routes/workspace.task-sync.ts"),
   route("presets", "routes/presets.tsx"),
   route("presets/new", "routes/presets.new.tsx"),
+  route("presets/:presetId", "routes/presets.$presetId.tsx"),
+  route("presets/:presetId/edit", "routes/presets.$presetId.edit.tsx"),
   route("operations", "routes/operations.tsx"),
   route("health", "routes/health.tsx"),
 ] satisfies RouteConfig;

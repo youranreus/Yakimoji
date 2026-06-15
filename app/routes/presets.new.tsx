@@ -3,7 +3,7 @@ import { Form, isRouteErrorResponse, useRouteError } from "react-router";
 import type { Route } from "./+types/presets.new";
 import { ChannelPresetWorkbench } from "~/features/presets/components/ChannelPresetWorkbench";
 import {
-  handlePresetRouteAction,
+  handlePresetCreateRouteAction,
   loadPresetRouteViewModel,
 } from "~/features/presets/server/preset-routes.server";
 
@@ -25,7 +25,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  return handlePresetRouteAction(request);
+  return handlePresetCreateRouteAction(request);
 }
 
 export default function NewPresetRoute({ loaderData }: Route.ComponentProps) {

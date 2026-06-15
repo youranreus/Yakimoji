@@ -2,40 +2,18 @@ import { randomUUID } from "node:crypto";
 
 import { and, desc, eq } from "drizzle-orm";
 import { data } from "react-router";
-import { z } from "zod";
 
 import { database } from "../../../../database/context";
 import { channelPresets } from "../../../../database/schema";
 import { getRequestContext } from "../../auth/server/request-context.server";
+import {
+  channelPresetFormSchema,
+  defaultPresetFormValues,
+  type ChannelPresetFormInput,
+  type PresetPreviewTheme,
+} from "../preset-form.shared";
 
-const presetInputSchema = z.object({
-  sourceIdentifier: z
-    .string()
-    .trim()
-    .min(3, "请输入可识别的来源频道标识。")
-    .max(320, "来源频道标识过长。"),
-  displayName: z
-    .string()
-    .trim()
-    .min(1, "请输入预设名称。")
-    .max(160, "预设名称过长。"),
-  translationMode: z
-    .string()
-    .trim()
-    .min(1, "请选择或填写默认翻译方向。")
-    .max(120, "默认翻译方向过长。"),
-  subtitleTemplate: z
-    .string()
-    .trim()
-    .min(1, "请选择或填写默认字幕模板。")
-    .max(160, "默认字幕模板过长。"),
-  outputPackage: z
-    .string()
-    .trim()
-    .min(1, "请选择或填写默认输出偏好。")
-    .max(120, "默认输出偏好过长。"),
-  notes: z.string().trim().max(500, "备注过长。").optional(),
-});
+import { z } from "zod";
 
 type ChannelPresetRow = {
   id: string;
@@ -51,7 +29,30 @@ type ChannelPresetRow = {
   updatedAt: Date;
 };
 
-type PresetInput = z.infer<typeof presetInputSchema>;
+type PresetInput = ChannelPresetFormInput;
+
+type ChannelPresetMetadata = {
+  subtitleStylePreview?: {
+    fontSize?: number;
+    theme?: PresetPreviewTheme;
+  };
+};
+
+export function mergePresetMetadata(
+  existingMetadata: Record<string, unknown>,
+  input: Pick<PresetInput, "previewFontSize" | "previewTheme">,
+) {
+  const current = existingMetadata as ChannelPresetMetadata;
+
+  return {
+    ...existingMetadata,
+    subtitleStylePreview: {
+      ...(current.subtitleStylePreview ?? {}),
+      fontSize: input.previewFontSize,
+      theme: input.previewTheme,
+    },
+  };
+}
 
 export type ChannelPresetView = {
   id: string;
@@ -64,6 +65,10 @@ export type ChannelPresetView = {
     outputPackage: string;
   };
   notes: string | null;
+  previewStyle: {
+    fontSize: number;
+    theme: PresetPreviewTheme;
+  };
   createdAt: string;
   updatedAt: string;
 };
@@ -145,13 +150,15 @@ function createPresetActionError(
 }
 
 function parsePresetInput(formData: FormData): PresetInput {
-  const parsed = presetInputSchema.safeParse({
+  const parsed = channelPresetFormSchema.safeParse({
     sourceIdentifier: formData.get("sourceIdentifier"),
     displayName: formData.get("displayName"),
     translationMode: formData.get("translationMode"),
     subtitleTemplate: formData.get("subtitleTemplate"),
     outputPackage: formData.get("outputPackage"),
     notes: formData.get("notes") ?? undefined,
+    previewFontSize: formData.get("previewFontSize"),
+    previewTheme: formData.get("previewTheme"),
   });
 
   if (!parsed.success) {
@@ -165,7 +172,25 @@ function parsePresetInput(formData: FormData): PresetInput {
   return parsed.data;
 }
 
+function getPreviewStyle(metadata: Record<string, unknown>) {
+  const typedMetadata = metadata as ChannelPresetMetadata;
+  const preview = typedMetadata.subtitleStylePreview;
+
+  return {
+    fontSize:
+      typeof preview?.fontSize === "number"
+        ? preview.fontSize
+        : defaultPresetFormValues.previewFontSize,
+    theme:
+      preview?.theme && ["classic", "cinema", "highContrast"].includes(preview.theme)
+        ? preview.theme
+        : defaultPresetFormValues.previewTheme,
+  } satisfies ChannelPresetView["previewStyle"];
+}
+
 function mapPresetView(row: ChannelPresetRow): ChannelPresetView {
+  const previewStyle = getPreviewStyle(row.metadata);
+
   return {
     id: row.id,
     sourceIdentifier: row.sourceIdentifier,
@@ -177,6 +202,7 @@ function mapPresetView(row: ChannelPresetRow): ChannelPresetView {
       outputPackage: row.outputPackage,
     },
     notes: row.notes,
+    previewStyle,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -284,7 +310,7 @@ async function insertRow(
       subtitleTemplate: input.subtitleTemplate,
       outputPackage: input.outputPackage,
       notes: input.notes || null,
-      metadata: {},
+      metadata: mergePresetMetadata({}, input),
       createdAt: now,
       updatedAt: now,
     })
@@ -301,6 +327,7 @@ async function updateRowForUser(
   ownerUserId: number,
   presetId: string,
   input: PresetInput,
+  existingMetadata: Record<string, unknown>,
 ): Promise<ChannelPresetRow | null> {
   const db = database();
   const [record] = await db
@@ -312,6 +339,7 @@ async function updateRowForUser(
       subtitleTemplate: input.subtitleTemplate,
       outputPackage: input.outputPackage,
       notes: input.notes || null,
+      metadata: mergePresetMetadata(existingMetadata, input),
       updatedAt: new Date(),
     })
     .where(
@@ -384,10 +412,24 @@ export async function updateChannelPreset(
   formData: FormData,
 ) {
   const input = parsePresetInput(formData);
+  const existing = await channelPresetTestHooks.findRowByIdImpl(
+    ownerUserId,
+    presetId,
+  );
+
+  if (!existing) {
+    createPresetActionError(
+      "channel_preset_forbidden",
+      "当前账号无权修改该频道预设，或预设不存在。",
+      { status: 403 },
+    );
+  }
+
   const row = await channelPresetTestHooks.updateRowForUserImpl(
     ownerUserId,
     presetId,
     input,
+    existing.metadata,
   );
 
   if (!row) {
