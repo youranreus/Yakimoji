@@ -1,46 +1,33 @@
 import { Form, isRouteErrorResponse, useRouteError } from "react-router";
 
-import type { Route } from "./+types/workspace";
-import {
-  CreatorWorkspaceScreen,
-} from "~/features/tasks/components/CreatorWorkspaceScreen";
-import { requireRole } from "~/features/auth/server/authz.server";
-import { requireUserSession } from "~/features/auth/server/session.server";
-import {
-  handleTaskIntakeAction,
-} from "~/features/tasks/server/task-intake.server";
-import { loadWorkspaceViewModel } from "~/features/tasks/server/workspace-view.server";
+import type { Route } from "./+types/presets";
+import { ChannelPresetWorkbench } from "~/features/presets/components/ChannelPresetWorkbench";
+import { loadPresetRouteViewModel } from "~/features/presets/server/preset-routes.server";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Yakimoji Workspace" },
+    { title: "Yakimoji Presets" },
     {
       name: "description",
-      content: "Yakimoji 创作者工作台。",
+      content: "查看创作者已维护的频道预设摘要列表。",
     },
   ];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  return loadWorkspaceViewModel({
+  return loadPresetRouteViewModel({
     request,
     context,
   });
 }
 
-export async function action({ request }: Route.ActionArgs) {
-  const authenticated = await requireUserSession(request);
-
-  await requireRole(authenticated, "creator", {
-    type: "workspace",
-    id: "creator-home",
-  });
-
-  return handleTaskIntakeAction(authenticated.user.id, request);
-}
-
-export default function WorkspaceRoute({ loaderData }: Route.ComponentProps) {
-  return <CreatorWorkspaceScreen loaderData={loaderData} />;
+export default function PresetsRoute({ loaderData }: Route.ComponentProps) {
+  return (
+    <ChannelPresetWorkbench
+      mode="list"
+      presets={loaderData.channelPresets}
+    />
+  );
 }
 
 export function ErrorBoundary() {
@@ -53,15 +40,15 @@ export function ErrorBoundary() {
           <p className="eyebrow">访问受限</p>
           <h1>
             {error.status === 403
-              ? "当前账号没有访问权限"
+              ? "当前账号没有预设列表访问权限"
               : error.status >= 500
-                ? "认证服务暂时不可用"
+                ? "预设列表暂时不可用"
                 : "请求失败"}
           </h1>
           <p className="lede">
             {typeof error.data === "object" && error.data && "message" in error.data
               ? String(error.data.message)
-              : "受保护工作台加载失败。"}
+              : "预设列表加载失败。"}
           </p>
           {error.status === 403 ? (
             <Form method="post" action="/logout">

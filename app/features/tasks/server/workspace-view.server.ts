@@ -91,7 +91,7 @@ function buildNavigation() {
   return [
     { label: "工作台总览", href: "/workspace", state: "active" as const },
     { label: "任务导入", href: "/workspace", state: "active" as const },
-    { label: "预设", href: "/workspace#presets", state: "active" as const },
+    { label: "预设", href: "/presets", state: "active" as const },
     { label: "Review", href: "#", state: "coming-soon" as const },
     { label: "交付", href: "#", state: "coming-soon" as const },
   ];

@@ -1,46 +1,40 @@
 import { Form, isRouteErrorResponse, useRouteError } from "react-router";
 
-import type { Route } from "./+types/workspace";
+import type { Route } from "./+types/presets.new";
+import { ChannelPresetWorkbench } from "~/features/presets/components/ChannelPresetWorkbench";
 import {
-  CreatorWorkspaceScreen,
-} from "~/features/tasks/components/CreatorWorkspaceScreen";
-import { requireRole } from "~/features/auth/server/authz.server";
-import { requireUserSession } from "~/features/auth/server/session.server";
-import {
-  handleTaskIntakeAction,
-} from "~/features/tasks/server/task-intake.server";
-import { loadWorkspaceViewModel } from "~/features/tasks/server/workspace-view.server";
+  handlePresetRouteAction,
+  loadPresetRouteViewModel,
+} from "~/features/presets/server/preset-routes.server";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Yakimoji Workspace" },
+    { title: "Yakimoji New Preset" },
     {
       name: "description",
-      content: "Yakimoji 创作者工作台。",
+      content: "为来源频道创建最小可复用预设。",
     },
   ];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  return loadWorkspaceViewModel({
+  return loadPresetRouteViewModel({
     request,
     context,
   });
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  const authenticated = await requireUserSession(request);
-
-  await requireRole(authenticated, "creator", {
-    type: "workspace",
-    id: "creator-home",
-  });
-
-  return handleTaskIntakeAction(authenticated.user.id, request);
+  return handlePresetRouteAction(request);
 }
 
-export default function WorkspaceRoute({ loaderData }: Route.ComponentProps) {
-  return <CreatorWorkspaceScreen loaderData={loaderData} />;
+export default function NewPresetRoute({ loaderData }: Route.ComponentProps) {
+  return (
+    <ChannelPresetWorkbench
+      mode="create"
+      presets={loaderData.channelPresets}
+    />
+  );
 }
 
 export function ErrorBoundary() {
@@ -53,15 +47,15 @@ export function ErrorBoundary() {
           <p className="eyebrow">访问受限</p>
           <h1>
             {error.status === 403
-              ? "当前账号没有访问权限"
+              ? "当前账号没有创建预设权限"
               : error.status >= 500
-                ? "认证服务暂时不可用"
+                ? "预设创建页面暂时不可用"
                 : "请求失败"}
           </h1>
           <p className="lede">
             {typeof error.data === "object" && error.data && "message" in error.data
               ? String(error.data.message)
-              : "受保护工作台加载失败。"}
+              : "预设创建流程加载失败。"}
           </p>
           {error.status === 403 ? (
             <Form method="post" action="/logout">

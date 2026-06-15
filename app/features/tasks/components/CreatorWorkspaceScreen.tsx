@@ -1,7 +1,6 @@
 import { Form, useActionData } from "react-router";
 
 import { ChannelPresetWorkbench } from "~/features/presets/components/ChannelPresetWorkbench";
-import type { ChannelPresetActionResult } from "~/features/presets/server/channel-presets.server";
 import { WorkspaceShell } from "~/shared/ui/WorkspaceShell";
 
 import type { TaskActionError } from "../server/task-errors.server";
@@ -22,15 +21,13 @@ type CreatorWorkspaceScreenProps = {
 export function CreatorWorkspaceScreen({
   loaderData,
 }: CreatorWorkspaceScreenProps) {
-  const actionData = useActionData<
-    TaskIntakeActionResult | ChannelPresetActionResult
-  >();
+  const actionData = useActionData<TaskIntakeActionResult>();
   type WorkspaceTaskActionData =
     | TaskPreviewPayload
     | TaskCreatedPayload
     | TaskActionError;
   const isTaskIntakeActionData = (
-    value: TaskIntakeActionResult | ChannelPresetActionResult | null | undefined,
+    value: TaskIntakeActionResult | null | undefined,
   ): value is WorkspaceTaskActionData =>
     Boolean(
       value &&
@@ -62,7 +59,12 @@ export function CreatorWorkspaceScreen({
       panels={loaderData.panels}
       actionData={taskActionData}
       channelPresets={loaderData.channelPresets}
-      presetPanel={<ChannelPresetWorkbench presets={loaderData.channelPresets} />}
+      presetPanel={
+        <ChannelPresetWorkbench
+          mode="workspace"
+          presets={loaderData.channelPresets}
+        />
+      }
       taskListPanel={
         <TaskSyncBridge taskId={loaderData.selectedTask?.id ?? null}>
           <TaskListPanel

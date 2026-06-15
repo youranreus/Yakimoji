@@ -17,6 +17,8 @@ export default [
   route("tasks/:taskId/audit", "routes/tasks.$taskId.audit.tsx"),
   route("workspace/deliverables/:deliverableId", "routes/workspace.deliverables.$deliverableId.tsx"),
   route("workspace/task-sync", "routes/workspace.task-sync.ts"),
+  route("presets", "routes/presets.tsx"),
+  route("presets/new", "routes/presets.new.tsx"),
   route("operations", "routes/operations.tsx"),
   route("health", "routes/health.tsx"),
 ] satisfies RouteConfig;

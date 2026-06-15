@@ -74,6 +74,16 @@ function makeTaskDetail(overrides = {}) {
   };
 }
 
+function futureIsoDate(daysFromNow) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + daysFromNow);
+  return date.toISOString();
+}
+
+function futureDate(daysFromNow) {
+  return new Date(futureIsoDate(daysFromNow));
+}
+
 async function runLoader(loader, request, params) {
   return runWithRequestContext(
     createRequestContext(Object.fromEntries(request.headers.entries())),
@@ -391,7 +401,7 @@ test("GET /tasks/:taskId/result returns ready deliverables with controlled downl
             statusLabel: "可下载",
             canDownload: true,
             availableAt: "2026-06-08T10:00:00.000Z",
-            expiresAt: "2026-06-15T10:00:00.000Z",
+            expiresAt: futureIsoDate(30),
             downloadAction: "/workspace/deliverables/deliverable_1",
           },
         ],
@@ -609,7 +619,7 @@ test("GET /tasks/:taskId/result/deliverables/:deliverableId/download streams a r
       mimeType: "video/mp4",
       status: "ready",
       availableAt: new Date("2026-06-08T10:00:00.000Z"),
-      expiresAt: new Date("2026-06-15T10:00:00.000Z"),
+      expiresAt: futureDate(30),
     }),
     readFileImpl: async () => new Uint8Array([1, 2, 3]),
     writeAuditLogImpl: async () => {},
@@ -717,7 +727,7 @@ test("GET /tasks/:taskId/result/deliverables/:deliverableId/download returns a p
       mimeType: "video/mp4",
       status: "ready",
       availableAt: new Date("2026-06-08T10:00:00.000Z"),
-      expiresAt: new Date("2026-06-15T10:00:00.000Z"),
+      expiresAt: futureDate(30),
     }),
     readFileImpl: async () => {
       throw new Error("ENOENT");

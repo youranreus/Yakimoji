@@ -65,6 +65,7 @@ test("workspace view loader keeps /workspace as the default entry and parses pag
 
   assert.equal(receivedPage, 3);
   assert.equal(model.navigation[0]?.href, "/workspace");
+  assert.equal(model.navigation[2]?.href, "/presets");
   assert.equal(model.taskList.meta.pagination.page, 3);
   assert.equal(model.selectedTask, null);
   assert.deepEqual(model.channelPresets, []);
@@ -184,6 +185,7 @@ test("workspace view loader resolves a direct task detail route through the shar
   assert.equal(model.channelPresets[0]?.displayName, "Task 1 Channel");
   assert.equal(model.taskList.meta.pagination.page, 2);
   assert.equal(model.navigation[0]?.href, "/workspace");
+  assert.equal(model.navigation[2]?.href, "/presets");
   assert.equal(model.panels[0]?.title, "查看重点");
 });
 
