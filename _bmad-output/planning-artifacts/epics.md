@@ -173,8 +173,8 @@ FR4: Epic 2 - 命中预设后带默认配置创建任务
 FR5: Epic 2 - 未命中预设时以最小补充流程继续
 FR6: Epic 4 - 外部 API 创建任务
 FR7: Epic 1 - 创建前查看关键任务设置
-FR8: Epic 1 - 访问个人任务工作台
-FR9: Epic 2 - 创建频道预设
+FR8: Epic 1 - 访问个人任务工作台与清晰路由入口
+FR9: Epic 2 - 创建频道预设与预设管理入口
 FR10: Epic 2 - 预设默认翻译方向
 FR11: Epic 2 - 预设默认字幕模板
 FR12: Epic 2 - 预设默认输出偏好
@@ -182,7 +182,7 @@ FR13: Epic 2 - 编辑已有频道预设
 FR14: Epic 2 - 查看已维护频道预设
 FR15: Epic 2 - 来源匹配成功时自动复用预设
 FR16: Epic 2 - 标识命中、新建或未使用预设
-FR17: Epic 2 - 单任务覆盖默认字幕模板
+FR17: Epic 2 - 单任务覆盖默认字幕模板与预设样式预览
 FR18: Epic 1 - 提交任务进入完整处理流程
 FR19: Epic 1 - 系统执行转录翻译字幕生成烤制产出
 FR20: Epic 1 - 查看当前处理状态
@@ -242,10 +242,6 @@ FR50: Epic 6 - 提供最小审计记录供运营支持排障使用
 ### Epic 6: Operational Visibility and Auditability
 运营/管理角色可以衡量预设复用与未命中情况，并通过审计记录追踪任务生命周期中的关键事件。
 **FRs covered:** FR45, FR46, FR47, FR48, FR49, FR50
-
-### Epic 7: Product Information Architecture and Preset Editing Refactor
-在保留 Epic 1-6 已交付能力闭环的前提下，重构登录后产品的信息架构与路由边界，使 workspace 回归总览入口，并将任务、预设、详情、创建与编辑流程拆分为清晰、可寻址、可维护的页面或等价 UI 状态边界。
-**FRs covered:** FR8, FR9, FR13, FR14, FR17, FR20, FR22, FR37
 
 <!-- Repeat for each epic in epics_list (N = 1, 2, 3...) -->
 
@@ -438,6 +434,11 @@ So that 我能理解任务进展而不用手动拼凑后台情况。
 **Then** 核心路径必须可通过键盘完成
 **And** 状态、时间线与关键动作都必须具备清晰语义标签与非纯颜色表达
 
+**Given** 创作者进入登录后的 workspace
+**When** 页面加载
+**Then** workspace 必须只承担总览与入口职责
+**And** 任务列表、任务详情和任务创建必须拥有清晰的独立路由或可寻址状态边界，而不是继续混在同一页面中
+
 ### Story 1.6: Task Status Sync via SSE with Polling Fallback
 
 **Implements:** FR20, FR21
@@ -514,58 +515,94 @@ So that 我能直接拿到可交付结果而不需要额外人工整理。
 
 创作者可以创建和维护频道预设，让熟悉来源自动带出默认规则，并在陌生频道场景下快速决定如何继续。
 
-### Story 2.1: Create and Manage Channel Presets
+### Story 2.1: Preset List and Minimal Preset Creation
 
-**Implements:** FR9, FR10, FR11, FR12, FR13, FR14
-**Supports:** UX-DR14, UX-DR16
+**Implements:** FR9, FR10, FR11, FR12, FR14
+**Supports:** UX-DR14, UX-DR16, UX-DR17
 
 As a 创作者,
-I want 创建、查看和编辑频道预设,
-So that 我能把常用频道的默认处理规则沉淀成可复用资产。
+I want 查看已有频道预设并创建新的最小预设,
+So that 我能先建立可复用资产，再让后续任务自动带出默认规则。
 
 **Acceptance Criteria:**
 
-**Given** 创作者已登录并进入工作台
-**When** 创作者进入频道预设管理入口
-**Then** 页面必须提供预设列表视图
+**Given** 创作者已登录并进入预设管理入口
+**When** 页面加载
+**Then** 系统必须提供独立的预设列表视图或可寻址状态
 **And** 创作者可以查看自己已维护的频道预设摘要信息
 
 **Given** 创作者需要为一个来源频道建立预设
 **When** 创作者发起创建预设动作
-**Then** 系统必须允许其创建新的频道预设
+**Then** 系统必须允许其进入独立的预设创建流程
 **And** 创建流程至少支持填写来源频道标识、默认翻译方向、默认字幕模板和默认输出偏好
 
-**Given** 创作者正在创建或编辑频道预设
-**When** 创作者提交有效配置
-**Then** 系统必须保存该预设并与当前创作者归属关联
+**Given** 创作者提交有效的新预设配置
+**When** 系统保存成功
+**Then** 该预设必须与当前创作者归属关联
 **And** 保存后的预设必须能在预设列表中再次查看和后续复用
-
-**Given** 创作者已存在一个频道预设
-**When** 创作者打开该预设的详情或编辑界面
-**Then** 创作者必须能查看当前已保存的默认翻译方向、默认字幕模板和默认输出偏好
-**And** 这些字段应以清晰、可读的方式展示，而不是只暴露底层技术值
-
-**Given** 创作者希望调整已有频道预设
-**When** 创作者修改并保存预设
-**Then** 系统必须更新该预设的已保存规则
-**And** 更新后的内容应成为后续任务命中该预设时的默认值来源
 
 **Given** 创作者提交的预设信息不完整或无效
 **When** 系统执行校验
 **Then** 页面必须返回明确的字段级或表单级错误提示
 **And** 错误反馈必须支持用户修正后再次提交，而不是让预设进入不确定状态
 
-**Given** 创作者在桌面端使用预设创建或编辑流程
-**When** 页面渲染预设表单
+**Given** 创作者在桌面端使用预设创建流程
+**When** 页面渲染表单
 **Then** 该流程必须遵循渐进暴露与轻量配置原则
 **And** 不得扩展成复杂翻译风格编辑器或超出已确认范围的高级参数后台
 
 **Given** 创作者访问他人预设或无权限的预设资源
 **When** 系统执行授权检查
 **Then** 系统必须拒绝越权访问
-**And** 只有预设拥有者或具备相应内部权限的角色才能查看或修改对应预设
+**And** 只有预设拥有者或具备相应内部权限的角色才能查看对应预设摘要或创建相关资源
 
-### Story 2.2: Resolve Preset Match for Familiar Sources
+### Story 2.2: Preset Detail, Editing, and Subtitle Preview
+
+**Implements:** FR13, FR14, FR17
+**Supports:** UX-DR4, UX-DR5, UX-DR6, UX-DR14, UX-DR17, UX-DR18
+
+As a 创作者,
+I want 通过独立的详情与编辑界面查看并调整频道预设,
+So that 我能清楚维护长期资产，并在保存前预览字幕样式效果。
+
+**Acceptance Criteria:**
+
+**Given** 创作者打开某个已存在的频道预设
+**When** 进入预设详情页或等价可寻址状态
+**Then** 系统必须展示来源频道、默认翻译方向、默认字幕模板和默认输出偏好
+**And** 这些字段必须以清晰、可读的方式展示，而不是只暴露底层技术值
+
+**Given** 创作者需要修改已有频道预设
+**When** 进入预设编辑流程
+**Then** 预设编辑应拥有独立路由或可寻址状态
+**And** 该流程必须承接预设基础信息与字幕样式配置，而不是继续挂在 workspace 内联区域中
+
+**Given** 创作者在预设编辑页调整字体大小、字幕模板等允许范围内的样式配置
+**When** 配置变化
+**Then** 页面必须同步展示模拟播放器或等价预览区域
+**And** 用户不需要离开编辑上下文即可观察效果
+
+**Given** 创作者查看只读详情页
+**When** 页面展示字幕样式效果
+**Then** 预览必须明确区分只读详情模式和可编辑模式
+**And** 详情页不能直接修改配置
+
+**Given** 创作者修改并保存预设
+**When** 系统保存成功
+**Then** 系统必须更新该预设的已保存规则
+**And** 更新后的内容应成为后续任务命中该预设时的默认值来源
+
+**Given** 某个任务后续使用该预设并需要任务级字幕模板覆盖
+**When** 创作者在任务创建流程中覆盖字幕模板
+**Then** 系统必须能明确区分预设默认模板与任务级覆盖模板
+**And** 不得把任务级覆盖隐式回写到频道预设本身
+
+**Given** 创作者越权访问他人预设详情或编辑页
+**When** 系统执行授权检查
+**Then** 系统必须拒绝该访问
+**And** 不得因详情页或编辑页拆分而放宽授权边界
+
+### Story 2.3: Resolve Preset Match for Familiar Sources
 
 **Implements:** FR4, FR15, FR16
 **Supports:** AR10, UX-DR8
@@ -621,7 +658,7 @@ So that 我不需要每次重新确认同一套默认规则。
 **Then** 系统必须能够区分该任务是命中已有预设、创建了新预设后继续还是未使用预设继续
 **And** 这些状态应可作为后续支持解释和运营统计的基础
 
-### Story 2.3: Unknown Source Manual Resolution
+### Story 2.4: Unknown Source Manual Resolution
 
 **Implements:** FR5, FR24, FR25
 **Supports:** UX-DR9, UX-DR16
@@ -677,7 +714,7 @@ So that 陌生频道不会把我拖进复杂后台或打断当前任务目标。
 **Then** 必须能够区分该任务属于创建新预设后继续、手动复用已有预设继续或未使用预设继续
 **And** 这些结果应成为后续解释和统计的正式状态来源
 
-### Story 2.4: Task-level Subtitle Template Override on Top of Presets
+### Story 2.5: Task-level Subtitle Template Override on Top of Presets
 
 **Implements:** FR17
 **Supports:** UX-DR14
@@ -824,13 +861,13 @@ So that 我能理解问题并决定下一步。
 **Then** 失败原因、恢复动作和上下文信息必须具备清晰语义和可达性
 **And** 关键错误解释不能仅依赖 toast 或瞬时提示承担
 
-### Story 3.3: Support Timeline and Diagnostic Context
+### Story 3.3: Support Diagnostic Timeline View
 
-**Implements:** FR30, FR31, FR32, FR33
+**Implements:** FR30, FR31, FR32
 **Supports:** NFR7
 
 As a 支持人员,
-I want 查看任务未命中、失败、中断与人工介入的关键时间线和上下文,
+I want 查看任务未命中、失败与中断的关键时间线和诊断上下文,
 So that 我能解释问题并协助定位原因。
 
 **Acceptance Criteria:**
@@ -850,25 +887,41 @@ So that 我能解释问题并协助定位原因。
 **Then** 系统必须展示失败或中断发生的关键阶段、原因分类和相关上下文
 **And** 这些信息必须足以支持支持人员向用户解释卡在哪一步、为什么发生
 
-**Given** 某个任务经历过人工覆盖或低置信度人工确认
-**When** 支持人员查看该任务诊断信息
-**Then** 系统必须能够展示相关人工操作记录
-**And** 至少包括操作类型、对应任务上下文和发生时间
-
 **Given** 某个任务有完整的状态流转历史
 **When** 支持人员查看任务时间线
 **Then** 系统必须按时间顺序展示关键状态节点
-**And** 时间线内容应可把来源识别、预设命中结果、处理阶段变化、失败或中断和人工介入串成一条可解释链路
+**And** 时间线内容应可把来源识别、预设命中结果、处理阶段变化与失败或中断串成一条可解释链路
 
 **Given** 支持人员无权查看某个任务或诊断信息
 **When** 支持人员尝试访问对应支持视图
 **Then** 系统必须拒绝越权访问
 **And** 不得因支持界面存在而放宽任务、交付物或审计上下文的授权边界
 
+### Story 3.4: Support Lookup and Manual-intervention History
+
+**Implements:** FR33
+**Supports:** NFR7
+
+As a 支持人员,
+I want 基于任务 ID 查看人工覆盖与人工确认记录,
+So that 我能解释用户做过哪些人工操作并辅助后续排障。
+
+**Acceptance Criteria:**
+
 **Given** 支持人员需要基于任务 ID 排查问题
 **When** 支持人员搜索或打开该任务
 **Then** 系统必须能基于任务 ID 读取相关状态与审计信息
 **And** 这些记录至少满足系统已承诺保留的时间窗口
+
+**Given** 某个任务经历过人工覆盖或低置信度人工确认
+**When** 支持人员查看该任务诊断信息
+**Then** 系统必须能够展示相关人工操作记录
+**And** 至少包括操作类型、对应任务上下文和发生时间
+
+**Given** 授权支持人员查看人工操作记录
+**When** 页面或接口展示这些内容
+**Then** 记录必须以结构化、可读的方式呈现
+**And** 不得要求支持人员直接解析底层原始日志才能理解发生过什么
 
 ## Epic 4: API-Integrated Processing Node
 
@@ -1147,14 +1200,28 @@ So that 我不在桌面前时也能推动任务继续执行。
 
 运营/管理角色可以衡量预设复用与未命中情况，并通过审计记录追踪任务生命周期中的关键事件。
 
-### Story 6.1: Operations Visibility Dashboard for Preset Reuse and Task Flow
+### Story 6.1: Core Operations KPI Overview
 
-**Implements:** FR45, FR46, FR47, FR48, FR49
+**Implements:** FR45, FR47, FR48, FR49
 **Supports:** NFR7
 
 As a 运营或管理角色,
-I want 查看预设命中、未命中、复用情况与关键耗时,
-So that 我能判断 Yakimoji 的核心价值是否真的成立。
+I want 查看预设命中、复用、关键耗时与人工介入概览,
+So that 我能快速判断 Yakimoji 的核心价值是否成立。
+
+**MVP KPI Definitions:**
+
+- `预设命中率`：统计周期内，`presetOutcome = matched_existing_preset` 的任务数 / 同周期内已完成来源识别的任务总数。
+- `预设复用率`：统计周期内，`presetOutcome in (matched_existing_preset, manually_selected_existing_preset)` 的任务数 / 同周期内已完成来源识别的任务总数。
+- `导入到进入处理耗时`：单任务从 `task created` 到首次进入 `queued` 或 `processing` 的耗时；面板默认展示 `median` 与 `p95`。
+- `人工介入任务占比`：统计周期内，进入过 `awaiting_preset_decision` 或 `awaiting_human_review` 的任务数 / 同周期内创建任务总数。
+- `失败/中断任务占比`：统计周期内，进入 `failed` 或等价中断终态的任务数 / 同周期内创建任务总数。
+
+**Drill-down Scope:**
+
+- 所有 KPI 的默认过滤范围为当前选定时间窗口内、当前运营可见权限范围下的任务集合。
+- 所有 KPI 必须支持 drill-down 到任务列表，且列表至少展示 `task id`、来源标识、presetOutcome、当前状态、创建时间、关键阶段时间戳。
+- 第一版不要求多维切片、同比环比、告警系统或可配置公式。
 
 **Acceptance Criteria:**
 
@@ -1168,11 +1235,6 @@ So that 我能判断 Yakimoji 的核心价值是否真的成立。
 **Then** 系统必须能够展示任务是否成功命中频道预设
 **And** 运营能够区分命中已有预设、创建新预设后继续、手动复用预设继续与未使用预设继续等关键路径
 
-**Given** 系统中存在多条任务记录
-**When** 运营或管理角色查看来源频道维度信息
-**Then** 系统必须能够显示哪些来源频道反复未命中预设
-**And** 该视图应足以帮助判断是识别问题、预设覆盖不足还是流程沉淀不足
-
 **Given** 系统持续产生任务数据
 **When** 运营或管理角色查看关键耗时信息
 **Then** 系统必须能够展示任务从导入到进入处理以及最终完成的关键耗时
@@ -1185,20 +1247,51 @@ So that 我能判断 Yakimoji 的核心价值是否真的成立。
 
 **Given** 系统已有一定数量的频道预设和任务
 **When** 运营或管理角色查看预设复用情况
-**Then** 系统必须能够展示频道预设复用情况或复用趋势
+**Then** 系统必须能够展示频道预设复用情况
 **And** 该能力应直接支撑产品是否兑现预设资产复用核心命题的判断
-
-**Given** 运营角色查看这些面板或统计信息
-**When** 页面展示关键指标
-**Then** 指标命名和状态解释必须清楚可读
-**And** 不得要求运营角色通过底层任务事件或技术日志自行拼装产品结论
 
 **Given** 团队交付第一版运营视图
 **When** 运营面板定义范围
 **Then** 第一版仅要求提供 3 到 5 个核心指标与 drill-down 到任务列表的能力
-**And** 本 story 不要求实现完整 BI 仪表盘、复杂告警系统或深度多维分析
+**And** 每个核心指标都必须有明确名称、计算口径和状态解释
 
-### Story 6.2: Minimum Audit Record and Queryable Task History
+**Given** 第一版运营面板展示预设命中率与预设复用率
+**When** 运营角色查看指标说明或 drill-down 结果
+**Then** 系统必须分别按本 story 中定义的 `presetOutcome` 口径计算
+**And** 不得把“新建预设后继续”或“未使用预设继续”错误计入复用率
+
+**Given** 第一版运营面板展示导入到进入处理耗时
+**When** 运营角色查看该指标
+**Then** 系统必须明确展示统计时间窗口与 `median`、`p95` 口径
+**And** 单任务耗时必须从 `task created` 计算到首次进入 `queued` 或 `processing`
+
+**Given** 第一版运营面板展示人工介入任务占比或失败/中断任务占比
+**When** 运营角色查看这些指标
+**Then** 系统必须基于本 story 中约定的状态集合计算
+**And** drill-down 列表必须能够展示触发该指标的具体任务
+
+### Story 6.2: Channel-level Non-match Analysis
+
+**Implements:** FR46
+**Supports:** NFR7
+
+As a 运营或管理角色,
+I want 查看哪些来源频道反复未命中预设,
+So that 我能判断是识别问题、预设覆盖不足还是流程沉淀不足。
+
+**Acceptance Criteria:**
+
+**Given** 系统中存在多条任务记录
+**When** 运营或管理角色查看来源频道维度信息
+**Then** 系统必须能够显示哪些来源频道反复未命中预设
+**And** 该视图必须能按来源频道聚合未命中次数或等价指标
+
+**Given** 某个来源频道存在多次未命中记录
+**When** 运营查看该来源频道的详情或 drill-down 结果
+**Then** 系统必须能够展示相关任务列表或等价明细
+**And** 不得要求运营角色通过底层任务事件或技术日志自行拼装产品结论
+
+### Story 6.3: Minimum Audit Record and Queryable Task History
 
 **Implements:** FR50
 **Supports:** NFR7
@@ -1238,153 +1331,3 @@ So that 我能复盘任务发生过什么并支撑解释、排障与恢复。
 **When** 页面或接口展示这些内容
 **Then** 记录必须以结构化、可读的方式呈现
 **And** 不得要求用户直接解析底层原始日志才能理解任务发生过什么
-
-## Epic 7: Product Information Architecture and Preset Editing Refactor
-
-Epic 1-6 已实现 Yakimoji 的主要能力闭环，但当前前端实现把任务入口、任务列表、任务详情、预设列表、预设编辑和创建动作集中在 workspace 页面，导致产品信息架构不清、路由职责不稳定，并削弱了频道预设作为核心资产的编辑与预览体验。
-
-本 Epic 不推翻既有业务能力，也不重写已完成 story 的历史语义。它作为交付后的纠偏 Epic，目标是在现有能力基础上重构产品承载方式：workspace 只承担工作入口和总览职责，任务与预设进入独立路由体系，预设编辑页提供模拟播放器和字幕样式预览，使后续维护、移动端适配和功能扩展建立在清晰边界上。
-
-**Execution Note:**
-
-- 本 Epic 之所以允许与 Epic 1 / 2 的前端文件边界产生重叠，是因为它处理的是已交付后的信息架构纠偏，而不是初始设计阶段的普通功能拆分。
-- 该重叠应被视为一次有明确业务理由的结构修正，而不是新 epic 设计的常规模式。
-- 后续新增 epics 仍应优先遵循“按用户价值分组、避免在多个 epic 中反复改同一核心文件族”的规则。
-
-### Story 7.1: Workspace Overview Summary Boundary Refactor
-
-**Implements:** FR8
-**Supports:** UX-DR1, UX-DR17
-
-As a 创作者,
-I want workspace 只作为工作入口展示关键概览与摘要信息,
-So that 我不会在一个页面里被任务、预设、详情和创建流程混在一起干扰。
-
-**Acceptance Criteria:**
-
-**Given** 创作者进入 workspace
-**When** 页面加载
-**Then** 页面应展示基础工作状态、运行中任务 banner、任务列表预览、任务创建入口、预设列表预览与预设入口占位
-**And** 不应在此页面展开完整任务详情、完整预设编辑表单或复杂异常处理流程
-
-**Given** workspace 加载数据
-**When** loader 执行
-**Then** 它只应加载总览所需摘要数据
-**And** 不应同时承担任务详情、完整预设编辑模型或对应 mutation 所需数据
-
-**Given** workspace 上存在任务或预设预览区块
-**When** 创作者在该页面浏览内容
-**Then** 页面必须将这些区块明确表现为摘要入口而非正式管理界面
-**And** 不得继续在 workspace 内承载完整任务管理或完整预设管理职责
-
-**Given** 团队准备在后续 stories 中建立 tasks 与 presets 正式路由
-**When** 本 story 完成
-**Then** workspace 的信息架构与数据边界必须已经收敛到总览角色
-**And** 本 story 不以完成独立 tasks 或 presets 路由作为验收前提
-
-### Story 7.2: Task List, Task Detail, and Task Creation Route Split
-
-**Implements:** FR8, FR20, FR22
-
-As a 创作者,
-I want 任务列表、任务详情和任务创建有清晰入口,
-So that 我可以按任务链路连续操作，而不是在 workspace 中寻找隐藏面板。
-
-**Acceptance Criteria:**
-
-**Given** 创作者需要浏览历史和运行中的任务
-**When** 进入任务列表
-**Then** 页面应提供独立任务列表路由
-**And** 支持分页、状态摘要和进入详情
-
-**Given** 创作者需要查看单个任务完整上下文
-**When** 打开任务详情
-**Then** 任务详情应拥有独立路由或可寻址弹窗状态
-**And** 展示状态、来源、时间线、交付物和异常信息
-
-**Given** 创作者需要发起新任务
-**When** 进入任务创建流程
-**Then** 任务创建应拥有独立路由或可寻址弹窗状态
-**And** 承接 YouTube 链接、上传、来源识别、预设命中确认和任务级轻量覆盖
-
-**Given** 任务创建或任务详情发生 mutation
-**When** action 执行
-**Then** 任务创建和任务详情 action 不应继续挂在 workspace action 中
-**And** 应归属 tasks 路由族
-
-### Story 7.3: Preset List, Preset Detail, and Preset Edit Route Split
-
-**Implements:** FR9, FR13, FR14
-**Supports:** UX-DR14
-
-As a 创作者,
-I want 预设列表、预设详情和预设编辑有独立承载界面,
-So that 频道预设能作为长期资产被清楚查看、维护和复用。
-
-**Acceptance Criteria:**
-
-**Given** 创作者需要查看当前已配置的频道预设
-**When** 进入预设管理
-**Then** 预设列表应拥有独立路由
-**And** 展示已配置预设摘要和创建入口
-
-**Given** 创作者打开某个预设
-**When** 进入详情
-**Then** 预设详情应支持只读预览
-**And** 展示来源频道、默认翻译方向、字幕模板、输出偏好和样式效果摘要
-
-**Given** 创作者需要修改已有预设
-**When** 进入编辑
-**Then** 预设编辑应拥有独立路由或可寻址弹窗状态
-**And** 承接预设基础信息和字幕样式配置
-
-**Given** 预设创建或更新发生 mutation
-**When** action 执行
-**Then** 预设创建、更新 action 不应继续挂在 workspace action 中
-**And** 应归属 presets 路由族
-
-**Given** 创作者越权访问他人预设
-**When** 系统执行授权检查
-**Then** 必须返回 403 或 404
-**And** 不得因详情页或编辑页拆分而放宽授权边界
-
-### Story 7.4: Subtitle Style Preview with Simulated Player
-
-**Implements:** FR13, FR17
-**Supports:** UX-DR4, UX-DR5, UX-DR6, UX-DR14, UX-DR18
-
-As a 创作者,
-I want 在预设编辑中通过模拟播放器预览字幕样式,
-So that 我能在保存前直观看到当前预设实际会产生的字幕效果。
-
-**Acceptance Criteria:**
-
-**Given** 创作者进入预设编辑页
-**When** 页面加载预设样式配置
-**Then** 页面必须包含模拟播放器区域
-**And** 用于展示当前字幕样式在视频画面中的实际效果
-
-**Given** 创作者调整字体大小、字幕模板等允许范围内的样式配置
-**When** 配置变化
-**Then** 预览应同步反映变化
-**And** 用户不需要离开编辑上下文即可观察效果
-
-**Given** 创作者查看只读详情页
-**When** 页面展示字幕样式效果
-**Then** 预览必须明确区分只读详情模式和可编辑模式
-**And** 详情页不能直接修改配置
-
-**Given** 页面承载模拟播放器与字幕样式预览
-**When** 设计和实现该能力
-**Then** 它必须保持在第一阶段边界内
-**And** 不扩展成逐句字幕编辑器或复杂视频编辑器
-
-**Given** 预设编辑页呈现字幕样式预览与相关控制
-**When** 页面完成渲染并响应用户调整
-**Then** 预览区域和相邻控制必须使用统一的颜色、排版与间距 token 体系
-**And** 关键文本、状态与辅助说明必须满足既定的无障碍对比度基线
-
-**Given** 不同字幕模板或样式产生差异
-**When** 用户查看预览
-**Then** 字幕预览差异必须提供文本辅助说明
-**And** 不能只依赖视觉差异表达

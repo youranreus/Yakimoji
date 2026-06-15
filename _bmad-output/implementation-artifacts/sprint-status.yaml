@@ -1,9 +1,9 @@
-# generated: 2026-05-20T23:45:41+0800
-# last_updated: 2026-05-21T20:59:02+0800
+# generated: 2026-06-15T16:05:00+0800
+# last_updated: 2026-06-15T16:05:00+0800
 # project: Yakimoji
 # project_key: NOKEY
 # tracking_system: file-system
-# story_location: /Users/youranreus/Code/Projects/Yakimoji/_bmad-output/implementation-artifacts
+# story_location: /Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/implementation-artifacts
 #
 # STATUS DEFINITIONS:
 # ==================
@@ -34,12 +34,12 @@
 # - Developer typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review in a fresh context
 
-generated: 2026-05-20T23:45:41+0800
-last_updated: 2026-06-15T15:20:00+0800
+generated: 2026-06-15T16:05:00+0800
+last_updated: 2026-06-15T16:05:00+0800
 project: Yakimoji
 project_key: NOKEY
 tracking_system: file-system
-story_location: /Users/youranreus/Code/Projects/Yakimoji/_bmad-output/implementation-artifacts
+story_location: /Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/implementation-artifacts
 
 development_status:
   epic-1: done
@@ -52,16 +52,17 @@ development_status:
   1-7-completed-deliverables-and-secure-result-access: done
   epic-1-retrospective: optional
   epic-2: done
-  2-1-create-and-manage-channel-presets: done
-  2-2-resolve-preset-match-for-familiar-sources: done
-  2-3-unknown-source-manual-resolution: done
-  2-4-task-level-subtitle-template-override-on-top-of-presets: done
+  2-1-preset-list-and-minimal-preset-creation: done
+  2-2-preset-detail-editing-and-subtitle-preview: done
+  2-3-resolve-preset-match-for-familiar-sources: done
+  2-4-unknown-source-manual-resolution: done
+  2-5-task-level-subtitle-template-override-on-top-of-presets: done
   epic-2-retrospective: done
   epic-3: done
-  3-0-review-failure-retry-and-diagnostic-contract-setup: done
   3-1-low-confidence-review-queue-for-creators: done
   3-2-failure-explanation-and-retry-to-new-attempt-recovery: done
-  3-3-support-timeline-and-diagnostic-context: done
+  3-3-support-diagnostic-timeline-view: done
+  3-4-support-lookup-and-manual-intervention-history: done
   epic-3-retrospective: done
   epic-4: done
   4-1-api-credential-validation-and-task-create-request: done
@@ -72,13 +73,8 @@ development_status:
   5-1-mobile-task-visibility-and-deliverable-access: done
   5-2-mobile-low-confidence-approve-or-reopen-flow: done
   epic-5-retrospective: optional
-  epic-6: in-progress
-  6-1-operations-visibility-dashboard-for-preset-reuse-and-task-flow: done
-  6-2-minimum-audit-record-and-queryable-task-history: done
+  epic-6: done
+  6-1-core-operations-kpi-overview: done
+  6-2-channel-level-non-match-analysis: done
+  6-3-minimum-audit-record-and-queryable-task-history: done
   epic-6-retrospective: optional
-  epic-7: backlog
-  7-1-workspace-overview-summary-boundary-refactor: backlog
-  7-2-task-list-task-detail-and-task-creation-route-split: backlog
-  7-3-preset-list-preset-detail-and-preset-edit-route-split: backlog
-  7-4-subtitle-style-preview-with-simulated-player: backlog
-  epic-7-retrospective: optional

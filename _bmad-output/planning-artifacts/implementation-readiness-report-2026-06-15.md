@@ -32,7 +32,7 @@ excludedFiles:
 
 **Whole Documents:**
 - [prd.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/prd.md) `37,043 bytes` `2026-06-15 14:08:55`
-- [prd-validation-report.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/prd-validation-report.md) `20,299 bytes` `2026-05-19 21:32:09` `Excluded by user`
+- [prd-validation-report.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/prd-validation-report.md) `20,299 bytes` `2026-05-19 21:32:09` `Excluded from assessment input`
 
 **Sharded Documents:**
 - None
@@ -48,7 +48,7 @@ excludedFiles:
 ### Epics & Stories Files Found
 
 **Whole Documents:**
-- [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md) `67,674 bytes` `2026-06-15 14:08:55`
+- [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md) `71,108 bytes` `2026-06-15 16:26:51`
 
 **Sharded Documents:**
 - None
@@ -63,13 +63,14 @@ excludedFiles:
 
 ### Additional Planning Inputs Included
 
-- [sprint-change-proposal-2026-06-15.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/sprint-change-proposal-2026-06-15.md) `20,406 bytes` `2026-06-15 14:04:50`
+- [sprint-change-proposal-2026-06-15.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/sprint-change-proposal-2026-06-15.md) `14,695 bytes` `2026-06-15 16:20:38`
 
 ### Resolution Summary
 
 - No whole-vs-sharded duplicate conflicts were found.
-- `prd-validation-report.md` was explicitly excluded from this readiness assessment.
-- `sprint-change-proposal-2026-06-15.md` was explicitly included as supplemental planning context.
+- All required planning artifacts for readiness review were found.
+- `prd-validation-report.md` was excluded as a validation artifact, not a source-of-truth PRD input.
+- `sprint-change-proposal-2026-06-15.md` was included as supplemental planning context.
 
 ## PRD Analysis
 
@@ -150,79 +151,88 @@ Total NFRs: 15
 
 ### Additional Requirements
 
-- 当前发布范围以单次发布为边界，必须覆盖从任务导入或上传、来源识别、预设命中或创建、任务处理、异常确认到成品交付的完整闭环。
-- 外部 API 不属于附属能力，必须作为正式范围的一部分支持任务创建、状态查询与结果获取。
-- 运营与支持能力只做到最小可用，不将 MVP 扩展成重型后台或复杂运营平台。
-- `workspace` 应承担总览与入口职责；任务列表、任务详情、任务创建、预设列表、预设详情与预设编辑应具备独立路由或等价的可寻址状态边界。
-- 前端交互采取桌面优先策略；移动端职责限定为查看状态、进入详情、处理必要确认与执行下载。
-- 实时状态同步优先使用 SSE，并提供轮询兜底。
-- SEO 不是第一阶段产品架构约束条件。
-- 无障碍目标级别为 WCAG AA。
-- 第一阶段只允许两个必要打断点：陌生频道首次出现时的轻量预设创建，以及低置信度片段的人工确认。
-- 任务级覆盖字段必须收敛，只保留字幕模板。
-- 成品视频交付链路优先级高于中间资产管理能力。
-- 最小可上线资源假设为一名前后端通才，这一约束要求范围持续收敛并优先保障主链路稳定性、状态可见性与交付可靠性。
+- AR1: Epic 1 Story 1 应以 React Router node-postgres template 初始化项目。
+- AR2: 技术基线固定为 TypeScript、Node、PostgreSQL 与 Drizzle migrations。
+- AR3: 认证边界采用 SSO 负责身份、Yakimoji 负责本地 session 与本地授权。
+- AR4: Web 登录态使用 HttpOnly 与 Secure session cookie，浏览器不直接持有上游 SSO token。
+- AR5: 本地 RBAC 至少包含 creator、support、ops、admin 四类角色。
+- AR6: 外部 API 使用独立 api_credentials，不复用 Web session。
+- AR7: 交付物访问必须走受控下载或短时效 presigned URL，禁止长期公开 URL。
+- AR8: API 风格采用 REST，核心资源包括 tasks、channel-presets、task-events、review、deliverables、api-credentials。
+- AR9: 所有 Yakimoji 自有 API 必须统一成功与错误 envelope，并保留 request_id。
+- AR10: 顶层任务状态必须统一枚举，Web、API、SSE 不允许各自发明状态语义。
+- AR11: SSE 仅做单向事件通知，断开时必须支持轮询兜底。
+- AR12: 人工介入应建模为显式 review 资源或 action endpoint。
+- AR13: 运行拓扑至少预留 web-app、postgres、object-storage、background-worker 四个边界。
+- AR14: 大文件与交付物使用 S3-compatible object storage，数据库只存元数据。
+- AR15: 必须具备结构化日志与 request_id、task_id、user_id、api_credential_id、event_type 等关联字段。
+- AR16: 最低 CI/CD 门槛包含 lint、typecheck、test、migration validation、OpenAPI contract validation、build。
+- AR17: 前端采用 React Router Framework Mode，状态管理采用路由状态、TanStack Query、本地 UI 状态三层分离。
+- AR18: 复杂表单采用 React Hook Form 与 Zod，且服务端 schema 为最终真源。
+- AR19: 代码组织采用 domain-first 结构，避免把领域代码堆进全局 shared/utils。
+- AR20: 下载授权、状态枚举、API envelope、权限检查必须作为跨模块统一契约处理。
 
 ### PRD Completeness Assessment
 
-该 PRD 对产品定位、用户旅程、范围边界、FR/NFR 和 Web 交付约束的表达已经足够完整，适合作为后续 traceability 检查的需求基线。优势在于主路径清晰、异常介入边界明确、API 与运营/支持可见性已被正式纳入范围，且 NFR 已具备较强可测性。
-
-当前仍存在两类后续校验重点。第一，若后续 epic/story 未显式覆盖“选择已有频道预设继续当前任务”“支持侧按组织授权查看审计信息”“移动端低置信度确认”“SSE 失败时轮询兜底”等要求，则容易在实施分解时漏项。第二，PRD 对处理链路内部状态机、来源识别判定口径、低置信度片段的数据结构与结果 envelope 只给出了产品层要求，后续需要在 architecture 与 epics/stories 中补足实现级定义，才能判定真正具备实施就绪度。
+- PRD contains an explicit, enumerated FR/NFR inventory, which is strong for downstream traceability.
+- API, support, operations, and mobile paths are all explicitly in scope, reducing ambiguity about MVP boundaries.
+- Non-functional requirements are generally testable and measurable, especially for auth, API contract, and performance expectations.
+- Primary residual risk at PRD level is breadth: the single-release scope remains large for a constrained team, so downstream epic/story discipline must prevent hidden scope inflation.
 
 ## Epic Coverage Validation
 
 ### Epic FR Coverage Extracted
 
-FR1: Covered in Epic 1
-FR2: Covered in Epic 1
-FR3: Covered in Epic 1
-FR4: Covered in Epic 2
-FR5: Covered in Epic 2
-FR6: Covered in Epic 4
-FR7: Covered in Epic 1
-FR8: Covered in Epic 1 and reinforced in Epic 7
-FR9: Covered in Epic 2 and reinforced in Epic 7
-FR10: Covered in Epic 2
-FR11: Covered in Epic 2
-FR12: Covered in Epic 2
-FR13: Covered in Epic 2 and reinforced in Epic 7
-FR14: Covered in Epic 2 and reinforced in Epic 7
-FR15: Covered in Epic 2
-FR16: Covered in Epic 2
-FR17: Covered in Epic 2 and reinforced in Epic 7
-FR18: Covered in Epic 1
-FR19: Covered in Epic 1
-FR20: Covered in Epic 1 and reinforced in Epic 7
-FR21: Covered in Epic 1
-FR22: Covered in Epic 1 and reinforced in Epic 7
-FR23: Covered in Epic 1
-FR24: Covered in Epic 2
-FR25: Covered in Epic 2
-FR26: Covered in Epic 3
-FR27: Covered in Epic 3
-FR28: Covered in Epic 3
-FR29: Covered in Epic 3
-FR30: Covered in Epic 3
-FR31: Covered in Epic 3
-FR32: Covered in Epic 3
-FR33: Covered in Epic 3
-FR34: Covered in Epic 1
-FR35: Covered in Epic 1
-FR36: Covered in Epic 1
-FR37: Covered in Epic 5 and reinforced in Epic 7
-FR38: Covered in Epic 5
-FR39: Covered in Epic 5
-FR40: Covered in Epic 4
-FR41: Covered in Epic 4
-FR42: Covered in Epic 4
-FR43: Covered in Epic 4
-FR44: Covered in Epic 4
-FR45: Covered in Epic 6
-FR46: Covered in Epic 6
-FR47: Covered in Epic 6
-FR48: Covered in Epic 6
-FR49: Covered in Epic 6
-FR50: Covered in Epic 6
+FR1: Epic 1 - 手动链接导入任务
+FR2: Epic 1 - 上传视频创建任务
+FR3: Epic 1 - 创建时查看来源识别结果
+FR4: Epic 2 - 命中预设后带默认配置创建任务
+FR5: Epic 2 - 未命中预设时以最小补充流程继续
+FR6: Epic 4 - 外部 API 创建任务
+FR7: Epic 1 - 创建前查看关键任务设置
+FR8: Epic 1 - 任务工作台与信息架构承载
+FR9: Epic 2 - 创建频道预设与预设承载界面
+FR10: Epic 2 - 预设默认翻译方向
+FR11: Epic 2 - 预设默认字幕模板
+FR12: Epic 2 - 预设默认输出偏好
+FR13: Epic 2 - 编辑已有频道预设
+FR14: Epic 2 - 查看已维护频道预设
+FR15: Epic 2 - 来源匹配成功时自动复用预设
+FR16: Epic 2 - 标识命中、新建或未使用预设
+FR17: Epic 2 - 单任务覆盖默认字幕模板与预设样式预览
+FR18: Epic 1 - 提交任务进入完整处理流程
+FR19: Epic 1 - 系统执行转录翻译字幕生成烤制产出
+FR20: Epic 1 - 查看当前处理状态与任务信息架构承载
+FR21: Epic 1 - 查看完整状态流转
+FR22: Epic 1 - 查看任务详情与结果概览
+FR23: Epic 1 / Epic 3 - 失败或中断结果状态与恢复说明
+FR24: Epic 2 - 未命中预设时提示创建/复用/不保存继续
+FR25: Epic 2 - 不中断任务目标地创建最小预设
+FR26: Epic 3 - 识别低置信度片段
+FR27: Epic 3 - 查看低置信度片段及上下文
+FR28: Epic 3 - 确认低置信度片段并继续推进
+FR29: Epic 3 - 仅在预设未命中或低置信度场景要求人工介入
+FR30: Epic 3 - 支持查看未命中预设原因
+FR31: Epic 3 - 支持查看失败或中断原因分类
+FR32: Epic 3 - 支持查看关键时间线与上下文
+FR33: Epic 3 - 支持查看人工覆盖与确认记录
+FR34: Epic 1 - 获取成品视频
+FR35: Epic 1 - 获取字幕文件
+FR36: Epic 1 - 查看最终交付结果状态
+FR37: Epic 5 - 移动端查看任务列表与详情
+FR38: Epic 5 - 移动端处理低置信度确认
+FR39: Epic 5 - 移动端下载交付物
+FR40: Epic 4 - 外部系统查询任务当前状态
+FR41: Epic 4 - 外部系统获取完成结果
+FR42: Epic 4 - 外部系统获取失败/中断/未命中预设的结构化结果
+FR43: Epic 4 - 外部系统区分任务关键状态
+FR44: Epic 4 - Yakimoji 作为外部工作流处理节点
+FR45: Epic 6 - 查看任务是否命中频道预设
+FR46: Epic 6 - 查看反复未命中预设的来源频道
+FR47: Epic 6 - 查看关键耗时信息
+FR48: Epic 6 - 查看失败、中断或人工介入环节
+FR49: Epic 6 - 查看频道预设复用情况
+FR50: Epic 6 - 提供最小审计记录供运营支持排障使用
 
 Total FRs in epics: 50
 
@@ -230,60 +240,61 @@ Total FRs in epics: 50
 
 | FR Number | PRD Requirement | Epic Coverage | Status |
 | --------- | --------------- | ------------- | ------ |
-| FR1 | 创作者可以通过提交 YouTube 链接创建视频处理任务。 | Epic 1 | ✓ Covered |
-| FR2 | 创作者可以通过上传视频文件创建视频处理任务。 | Epic 1 | ✓ Covered |
-| FR3 | 创作者可以在任务创建过程中查看系统识别到的来源信息。 | Epic 1 | ✓ Covered |
-| FR4 | 创作者可以在命中频道预设时，以已带出默认配置的方式创建任务。 | Epic 2 | ✓ Covered |
-| FR5 | 创作者可以在未命中频道预设时，通过最小补充流程继续创建当前任务。 | Epic 2 | ✓ Covered |
-| FR6 | 外部系统可以通过 API 创建视频处理任务。 | Epic 4 | ✓ Covered |
-| FR7 | 创作者可以查看任务创建前将要生效的关键任务设置。 | Epic 1 | ✓ Covered |
-| FR8 | 创作者可以访问自己的任务工作台并查看已创建任务。 | Epic 1, Epic 7 | ✓ Covered |
-| FR9 | 创作者可以为新的来源频道创建频道预设。 | Epic 2, Epic 7 | ✓ Covered |
-| FR10 | 创作者可以在频道预设中定义默认翻译方向。 | Epic 2 | ✓ Covered |
-| FR11 | 创作者可以在频道预设中定义默认字幕模板。 | Epic 2 | ✓ Covered |
-| FR12 | 创作者可以在频道预设中定义默认输出偏好。 | Epic 2 | ✓ Covered |
-| FR13 | 创作者可以编辑已有频道预设。 | Epic 2, Epic 7 | ✓ Covered |
-| FR14 | 创作者可以查看自己已维护的频道预设。 | Epic 2, Epic 7 | ✓ Covered |
-| FR15 | 系统可以在来源匹配成功时自动复用对应频道预设。 | Epic 2 | ✓ Covered |
-| FR16 | 系统可以明确标识任务是否命中了已有频道预设、创建了新预设，或未使用预设。 | Epic 2 | ✓ Covered |
-| FR17 | 创作者可以为单个任务覆盖默认字幕模板。 | Epic 2, Epic 7 | ✓ Covered |
-| FR18 | 创作者可以提交任务进入完整的视频处理流程。 | Epic 1 | ✓ Covered |
-| FR19 | 系统可以对任务执行转录、翻译、字幕生成、视频烤制与结果产出。 | Epic 1 | ✓ Covered |
-| FR20 | 创作者可以查看任务当前所处的处理状态。 | Epic 1, Epic 7 | ✓ Covered |
-| FR21 | 创作者可以查看任务从开始到完成或失败的状态流转过程。 | Epic 1 | ✓ Covered |
-| FR22 | 创作者可以查看任务详情，包括当前状态、来源信息与处理结果概览。 | Epic 1, Epic 7 | ✓ Covered |
-| FR23 | 系统可以在任务失败或中断时向创作者提供明确的任务结果状态。 | Epic 1 | ✓ Covered |
-| FR24 | 系统可以在来源频道未命中现有预设时，提示创作者执行以下处理之一：创建新的最小频道预设、为当前任务选择一个已有频道预设，或在不保存频道预设的前提下继续当前任务。 | Epic 2 | ✓ Covered |
-| FR25 | 创作者可以在不中断当前任务目标的前提下创建最小频道预设。 | Epic 2 | ✓ Covered |
-| FR26 | 系统可以识别需要人工处理的低置信度片段。 | Epic 3 | ✓ Covered |
-| FR27 | 创作者可以查看需要人工确认的低置信度片段及其相关上下文。 | Epic 3 | ✓ Covered |
-| FR28 | 创作者可以对低置信度片段进行确认或处理，并让任务继续推进。 | Epic 3 | ✓ Covered |
-| FR29 | 创作者可以仅在以下异常场景下被要求人工介入任务：来源频道未命中现有频道预设，或系统识别出需要人工确认的低置信度片段。 | Epic 3 | ✓ Covered |
-| FR30 | 支持人员可以查看任务未命中频道预设的原因。 | Epic 3 | ✓ Covered |
-| FR31 | 支持人员可以查看任务处理失败或中断的原因分类。 | Epic 3 | ✓ Covered |
-| FR32 | 支持人员可以查看任务处理过程中的关键时间线与上下文信息。 | Epic 3 | ✓ Covered |
-| FR33 | 支持人员可以查看任务曾使用的人工覆盖与人工确认记录。 | Epic 3 | ✓ Covered |
-| FR34 | 创作者可以获取已完成任务的成品视频。 | Epic 1 | ✓ Covered |
-| FR35 | 创作者可以获取与成品任务关联的字幕文件。 | Epic 1 | ✓ Covered |
-| FR36 | 创作者可以查看单个任务的最终交付结果状态。 | Epic 1 | ✓ Covered |
-| FR37 | 创作者可以在移动端浏览器中查看任务列表与任务详情。 | Epic 5, Epic 7 | ✓ Covered |
-| FR38 | 创作者可以在移动端浏览器中处理低置信度确认。 | Epic 5 | ✓ Covered |
-| FR39 | 创作者可以在移动端浏览器中下载已完成任务的交付物。 | Epic 5 | ✓ Covered |
-| FR40 | 外部系统可以查询任务当前状态。 | Epic 4 | ✓ Covered |
-| FR41 | 外部系统可以获取任务完成后的结果信息。 | Epic 4 | ✓ Covered |
-| FR42 | 外部系统可以获取任务失败、中断或未命中预设时的结构化结果。 | Epic 4 | ✓ Covered |
-| FR43 | 外部系统可以区分任务是否已进入处理、等待人工处理、处理失败或处理完成。 | Epic 4 | ✓ Covered |
-| FR44 | 外部系统可以把 Yakimoji 作为可查询状态和结果的处理节点接入自身工作流。 | Epic 4 | ✓ Covered |
-| FR45 | 运营或管理角色可以查看任务是否成功命中频道预设。 | Epic 6 | ✓ Covered |
-| FR46 | 运营或管理角色可以查看哪些来源频道反复未命中预设。 | Epic 6 | ✓ Covered |
-| FR47 | 运营或管理角色可以查看任务从导入到进入处理以及最终完成的关键耗时信息。 | Epic 6 | ✓ Covered |
-| FR48 | 运营或管理角色可以查看任务在哪些环节发生失败、中断或人工介入。 | Epic 6 | ✓ Covered |
-| FR49 | 运营或管理角色可以查看频道预设复用情况。 | Epic 6 | ✓ Covered |
-| FR50 | 系统可以为任务提供最小审计记录，至少包含任务 ID、来源标识、命中的频道预设或未命中结果、任务状态流转时间戳、人工覆盖记录、人工确认记录，以及失败或中断原因，供运营、支持与排障使用。 | Epic 6 | ✓ Covered |
+| FR1 | 创作者可以通过提交 YouTube 链接创建视频处理任务。 | Epic 1 | Covered |
+| FR2 | 创作者可以通过上传视频文件创建视频处理任务。 | Epic 1 | Covered |
+| FR3 | 创作者可以在任务创建过程中查看系统识别到的来源信息。 | Epic 1 | Covered |
+| FR4 | 创作者可以在命中频道预设时，以已带出默认配置的方式创建任务。 | Epic 2 | Covered |
+| FR5 | 创作者可以在未命中频道预设时，通过最小补充流程继续创建当前任务。 | Epic 2 | Covered |
+| FR6 | 外部系统可以通过 API 创建视频处理任务。 | Epic 4 | Covered |
+| FR7 | 创作者可以查看任务创建前将要生效的关键任务设置。 | Epic 1 | Covered |
+| FR8 | 创作者可以访问自己的任务工作台并查看已创建任务。 | Epic 1 | Covered |
+| FR9 | 创作者可以为新的来源频道创建频道预设。 | Epic 2 | Covered |
+| FR10 | 创作者可以在频道预设中定义默认翻译方向。 | Epic 2 | Covered |
+| FR11 | 创作者可以在频道预设中定义默认字幕模板。 | Epic 2 | Covered |
+| FR12 | 创作者可以在频道预设中定义默认输出偏好。 | Epic 2 | Covered |
+| FR13 | 创作者可以编辑已有频道预设。 | Epic 2 | Covered |
+| FR14 | 创作者可以查看自己已维护的频道预设。 | Epic 2 | Covered |
+| FR15 | 系统可以在来源匹配成功时自动复用对应频道预设。 | Epic 2 | Covered |
+| FR16 | 系统可以明确标识任务是否命中了已有频道预设、创建了新预设，或未使用预设。 | Epic 2 | Covered |
+| FR17 | 创作者可以为单个任务覆盖默认字幕模板。 | Epic 2 | Covered |
+| FR18 | 创作者可以提交任务进入完整的视频处理流程。 | Epic 1 | Covered |
+| FR19 | 系统可以对任务执行转录、翻译、字幕生成、视频烤制与结果产出。 | Epic 1 | Covered |
+| FR20 | 创作者可以查看任务当前所处的处理状态。 | Epic 1 | Covered |
+| FR21 | 创作者可以查看任务从开始到完成或失败的状态流转过程。 | Epic 1 | Covered |
+| FR22 | 创作者可以查看任务详情，包括当前状态、来源信息与处理结果概览。 | Epic 1 | Covered |
+| FR23 | 系统可以在任务失败或中断时向创作者提供明确的任务结果状态。 | Epic 1, Epic 3 | Covered |
+| FR24 | 系统可以在来源频道未命中现有预设时，提示创作者执行以下处理之一：创建新的最小频道预设、为当前任务选择一个已有频道预设，或在不保存频道预设的前提下继续当前任务。 | Epic 2 | Covered |
+| FR25 | 创作者可以在不中断当前任务目标的前提下创建最小频道预设。 | Epic 2 | Covered |
+| FR26 | 系统可以识别需要人工处理的低置信度片段。 | Epic 3 | Covered |
+| FR27 | 创作者可以查看需要人工确认的低置信度片段及其相关上下文。 | Epic 3 | Covered |
+| FR28 | 创作者可以对低置信度片段进行确认或处理，并让任务继续推进。 | Epic 3 | Covered |
+| FR29 | 创作者可以仅在以下异常场景下被要求人工介入任务：来源频道未命中现有频道预设，或系统识别出需要人工确认的低置信度片段。 | Epic 3 | Covered |
+| FR30 | 支持人员可以查看任务未命中频道预设的原因。 | Epic 3 | Covered |
+| FR31 | 支持人员可以查看任务处理失败或中断的原因分类。 | Epic 3 | Covered |
+| FR32 | 支持人员可以查看任务处理过程中的关键时间线与上下文信息。 | Epic 3 | Covered |
+| FR33 | 支持人员可以查看任务曾使用的人工覆盖与人工确认记录。 | Epic 3 | Covered |
+| FR34 | 创作者可以获取已完成任务的成品视频。 | Epic 1 | Covered |
+| FR35 | 创作者可以获取与成品任务关联的字幕文件。 | Epic 1 | Covered |
+| FR36 | 创作者可以查看单个任务的最终交付结果状态。 | Epic 1 | Covered |
+| FR37 | 创作者可以在移动端浏览器中查看任务列表与任务详情。 | Epic 5 | Covered |
+| FR38 | 创作者可以在移动端浏览器中处理低置信度确认。 | Epic 5 | Covered |
+| FR39 | 创作者可以在移动端浏览器中下载已完成任务的交付物。 | Epic 5 | Covered |
+| FR40 | 外部系统可以查询任务当前状态。 | Epic 4 | Covered |
+| FR41 | 外部系统可以获取任务完成后的结果信息。 | Epic 4 | Covered |
+| FR42 | 外部系统可以获取任务失败、中断或未命中预设时的结构化结果。 | Epic 4 | Covered |
+| FR43 | 外部系统可以区分任务是否已进入处理、等待人工处理、处理失败或处理完成。 | Epic 4 | Covered |
+| FR44 | 外部系统可以把 Yakimoji 作为可查询状态和结果的处理节点接入自身工作流。 | Epic 4 | Covered |
+| FR45 | 运营或管理角色可以查看任务是否成功命中频道预设。 | Epic 6 | Covered |
+| FR46 | 运营或管理角色可以查看哪些来源频道反复未命中预设。 | Epic 6 | Covered |
+| FR47 | 运营或管理角色可以查看任务从导入到进入处理以及最终完成的关键耗时信息。 | Epic 6 | Covered |
+| FR48 | 运营或管理角色可以查看任务在哪些环节发生失败、中断或人工介入。 | Epic 6 | Covered |
+| FR49 | 运营或管理角色可以查看频道预设复用情况。 | Epic 6 | Covered |
+| FR50 | 系统可以为任务提供最小审计记录，至少包含任务 ID、来源标识、命中的频道预设或未命中结果、任务状态流转时间戳、人工覆盖记录、人工确认记录，以及失败或中断原因，供运营、支持与排障使用。 | Epic 6 | Covered |
 
 ### Missing Requirements
 
-No uncovered PRD functional requirements were found in the epic coverage map.
+- No functional requirements from the PRD are missing from the epic coverage map.
+- No extra FR identifiers were declared in epics beyond the PRD inventory.
 
 ### Coverage Statistics
 
@@ -293,118 +304,123 @@ No uncovered PRD functional requirements were found in the epic coverage map.
 
 ### Coverage Assessment
 
-Epic 层面的 FR traceability 是完整的，`epics.md` 已显式给出从 FR1 到 FR50 的一一映射，没有遗漏项，也没有发现 epic 额外声称覆盖但 PRD 中不存在的 FR 编号。
-
-当前风险不在“有没有覆盖”，而在“覆盖是否足够可执行”。尤其要在后续步骤重点检查以下几类 story 是否真正把要求分解到可实施粒度：`FR24` 的三分支陌生频道决策、`FR30-FR33` 的支持诊断可见性、`FR37-FR39` 的移动端跟进能力，以及 `FR50` 对最小审计记录字段完整性的落实。
+- At the document traceability level, FR coverage is complete.
+- Coverage is strongest where the epics explicitly mirror the PRD inventory and include a dedicated `FR Coverage Map`.
+- The main remaining risk is not missing FR IDs, but whether some broad FRs are implemented with enough story depth. This must be tested in later quality and alignment steps rather than in the coverage count itself.
 
 ## UX Alignment Assessment
 
 ### UX Document Status
 
-Found:
-- [ux-design-specification.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/ux-design-specification.md)
+- Found: [ux-design-specification.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/ux-design-specification.md)
+- Architecture reviewed against UX: [architecture.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/architecture.md)
 
-### Alignment Findings
+### Alignment Strengths
 
-#### UX ↔ PRD Alignment
-
-- UX 对熟悉频道自动开跑、陌生频道三分支决策、失败解释与恢复三条主旅程的定义，与 PRD 的 Journey 1、Journey 2、Journey 4 及其对应 FR4-FR5、FR24-FR29、FR30-FR33 保持一致。
-- UX 明确把 `workspace` 限定为总览入口，并把 `tasks`、`presets`、`review/results` 拆成独立页面或可寻址状态，这与 PRD 中“workspace 回归总览角色、任务与预设进入独立路由边界”的 Web 要求一致。
-- UX 把移动端职责限定为查看任务、处理低置信度确认和下载交付物，对应 PRD 的 FR37-FR39、移动端职责声明和桌面优先策略，没有越界扩张成完整移动生产端。
-- UX 对字幕样式配置模块的约束是“模板 + 少量样式配置 + 模拟播放器预览，不扩展成复杂编辑器”，与 PRD 中任务级覆盖只保留字幕模板、复杂视觉判断后置的范围控制一致。
-- UX 将无障碍目标定为 WCAG AA，要求键盘可达、非纯颜色状态表达、44x44 触控目标，与 PRD 的无障碍与响应式要求一致。
-
-#### UX ↔ Architecture Alignment
-
-- Architecture 明确采用对象导向的路由边界：`/workspace`、`/tasks`、`/presets`、`/review`、`/deliverables/results`，直接承接 UX 的页面定义与导航模式。
-- Architecture 以 `tasks + task_events + SSE + polling fallback` 承接 UX 的流程账本、运行中状态、失败解释与恢复体验，对“让自动化看起来正在工作”和“状态统一表达”有明确技术支撑。
-- Architecture 通过显式 review 资源与 `GET /tasks/:id/review-items`、`POST /tasks/:id/review-decisions` 承接 UX 的低置信度确认流，支撑桌面和移动端的 review 场景。
-- Architecture 将预设编辑定义为复杂交互表单，并明确由 `presets` 路由族与领域模块承接，同时支持模拟播放器预览，和 UX 的 Preset Detail/Edit 页面定义一致。
-- Architecture 对分页、按需加载、SSE 仅作缓存更新信号、大文件下载直走受控下载入口等策略，能支撑 UX 中任务列表高频扫读、状态实时感知与交付下载体验。
+- PRD, UX, and Architecture all align on the core product stance: desktop-first web workspace, lightweight mobile follow-through, and channel-preset-driven task launch.
+- The architecture explicitly supports key UX-critical behaviors: unified task status model, SSE with polling fallback, review as a first-class resource, protected deliverable access, and separated routes for workspace/tasks/presets.
+- UX requirements for preset preview, task timeline visibility, failure explanation, and auditability are reflected in the epic set and architecture route/domain boundaries.
 
 ### Alignment Issues
 
-- 未发现明显的 PRD ↔ UX 或 UX ↔ Architecture 方向性冲突。
-- 目前的主要问题不是方向不一致，而是若后续 stories 未把 UX 中“解释先于动作”“并列三选项无默认倾向”“详情/编辑/创建保留可寻址状态”“模拟播放器只承载轻量样式预览”落实到验收标准和实现约束，开发阶段仍可能回退成 workspace 巨页或重配置表单。
+1. No blocking UX-to-PRD scope drift remains after normalization.
+   - Mobile scope in UX now matches PRD/Epics: view task status, handle low-confidence confirmation, and download deliverables.
+   - Failure recovery in UX now matches the MVP recovery contract in Epic 3.
+   - Notification language in UX has been demoted from first-phase commitment to later enhancement.
 
 ### Warnings
 
-- UX 文档中“自动化失败后的解释与恢复”旅程展示了“直接重试、调整规则后重试、切换预设、稍后处理”等恢复分支；但当前 epic/story 主要明确了 retry-to-new-attempt 基线，尚需在后续 story 质量审查中确认其余恢复动作是第一阶段正式范围、后续扩展方向，还是仅作为 UX 探索表达。
-- UX 文档包含较强的视觉与情绪设计表述，这些内容本身不构成实施阻塞；真正需要 Architecture 和 stories 兑现的是页面结构、交互边界、状态反馈与可访问性约束。若团队把 UX 文档当作纯视觉参考而忽略其信息架构与异常恢复规则，会产生实施偏差。
+- No missing UX documentation issue exists.
+- After scope normalization, architecture and UX are materially aligned for MVP implementation.
 
 ## Epic Quality Review
 
+### Positive Checks
+
+- No obvious forward-dependency violations were found inside the story order. Stories generally build on prior stories rather than explicitly waiting for future stories.
+- The starter-template exception is handled correctly: Story 1.1 exists because the architecture explicitly requires starter-template initialization.
+- The database/entity creation principle is mostly respected in wording. The stories generally avoid saying “create all tables upfront.”
+
 ### 🔴 Critical Violations
 
-- **Epic 7 存在同 epic 前向依赖，违反“故事必须按顺序独立可完成”原则。**
-  - 证据：`Story 7.1` 的验收要求用户从 `workspace` 导航到“独立任务列表路由”和“独立预设列表路由”，见 [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md:1183) 与 [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md:1188)。
-  - 但这些正式路由是在后续 `Story 7.2` 与 `Story 7.3` 中才被建立，见 [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md:1198) 与 [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md:1226)。
-  - 影响：`Story 7.1` 不能在不等待未来 stories 的情况下完整验收，破坏了同 epic 的顺序独立性。
-  - 修复建议：将 `Story 7.1` 收敛为纯 `workspace` 摘要收敛与 loader/action ownership 收敛；把“导航到独立 tasks/presets 路由”的验收只保留在 `Story 7.2 / 7.3`。或者重排 Epic 7 顺序，先落地 tasks/presets 路由，再做 workspace 收敛。
+- No remaining critical epic-structure violations were found after consolidating the former corrective IA/refactor epic back into earlier user-value epics.
 
 ### 🟠 Major Issues
 
-- **缺少 story 级 FR traceability，无法满足“每个 story 引用其实现的具体 FR”这一就绪标准。**
-  - 证据：`epics.md` 只在 epic 层提供 `FRs covered`，但 story 段落没有 `Implements: FRx` 或等价映射字段，见 [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md:224) 到 [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md:248) 与全部 story 段落。
-  - 影响：虽然 epic 级覆盖率是 100%，但开发和验收阶段无法快速判断单个 story 是否完整承接了对应 FR，降低可追踪性和改动评审效率。
-  - 修复建议：为每个 story 增加明确的 `Implements:` 或 `Requirements:` 标记，至少覆盖 FR，必要时补充 NFR / AR / UX-DR。
-
-- **多项 Additional Requirements 与 UX-DR 只停留在 inventory，未被 story 显式承接。**
-  - 证据：`epics.md` 已列出 `AR16` 到 `AR20`、`UX-DR3` 到 `UX-DR18` 等要求，见 [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md:138) 到 [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md:165)。
-  - 其中至少以下条目没有形成清晰 story ownership：
-    - `AR16` 最低 CI/CD 门槛：`lint`、`typecheck`、`test`、`migration validation`、`OpenAPI contract validation`、`build`
-    - `UX-DR3` 响应式断点策略
-    - `UX-DR4` 颜色 token 与关键对比度
-    - `UX-DR5` typography token 系统
-    - `UX-DR6` spacing / layout 节奏系统
-  - 影响：第 3 步工作流要求“如果 UX-DR 存在，必须由 stories 覆盖”；当前文档无法证明这些要求已经进入实现计划。
-  - 修复建议：新增一个明确承接 design foundation / app shell standards / delivery quality gates 的 story，或把这些要求分配到现有 stories 的验收标准中，并写出可验证条目。
-
-- **Epic 7 与 Epic 1/2 在同一核心前端文件族上的重叠度很高，但当前文档没有显式说明为何这种后置拆分优于在同一 epic 内顺序完成。**
-  - 证据：Epic 7 直接重构 `workspace`、`tasks`、`presets` 路由边界，和 Epic 1/2 中任务入口、任务详情、预设管理的核心文件高度重叠，见 [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md:1168) 之后；`sprint-change-proposal` 虽然解释了纠偏背景，但这一 rationale 没被写回 Epic 7 的执行约束中。
-  - 影响：从 create-epics-and-stories 的 best practice 看，这类高文件 churn 拆分只有在“真实交付历史不可改写、需要纠偏 epic”时才合理。若没有把这个理由写进 epic 执行约束，后续读者会误判这是可避免的结构性返工。
-  - 修复建议：在 Epic 7 或其开头增加显式备注，说明这是“已交付后纠偏 epic”，保留历史语义、以降低继续堆叠风险为目标，因此允许与既有前端文件重叠；并禁止将相同模式推广到新 epic 设计。
+2. Story 6.1 still carries cross-cutting dashboard behavior, but its KPI formulas and drill-down boundaries are now explicitly defined.
+   - Evidence: `Story 6.1` now defines `预设命中率`、`预设复用率`、`导入到进入处理耗时`、`人工介入任务占比`、`失败/中断任务占比` and the drill-down scope directly in the story.
+   - Impact: remaining risk is implementation discipline rather than planning ambiguity.
+   - Recommendation: keep the ACs tightly enforced and treat the KPI formulas as contract-level definitions during implementation.
 
 ### 🟡 Minor Concerns
 
-- Epic 3 的失败恢复 story 主要固化了 retry-to-new-attempt 基线，但 UX 文档还呈现了“调整规则后重试”“切换预设”“稍后处理”等恢复表达。当前文档需要更明确地区分这些是第一阶段正式范围，还是 UX 中保留的未来扩展表达。
-- 一些故事虽然包含较好的错误路径和授权约束，但缺少更直接的 requirement 标签，导致 NFR / AR / UX-DR 的承接需要依赖人工推断。
+5. Story 1.1 is a technical foundation story, not a pure user-value story.
+   - Evidence: [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md:256)
+   - Context: this is acceptable here because the architecture requires starter-template setup, and the create-epics-and-stories workflow explicitly expects that exception.
+   - Recommendation: keep it, but mark it in team conventions as a sanctioned foundation-story exception so future story authors do not copy this pattern casually.
 
-### Best Practices Compliance Snapshot
+### Epic Quality Assessment
 
-- Epic delivers user value:
-  - Epic 1-6: Pass
-  - Epic 7: Conditionally pass, but requires explicit corrective-epic rationale
-- Epic can function independently:
-  - Epic 1-6: Pass
-  - Epic 7: Partial fail due to Story 7.1 forward dependency on 7.2/7.3
-- Stories appropriately sized: Mostly pass
-- No forward dependencies: Fail in Epic 7
-- Database tables created only when first needed: Pass at story design level
-- Clear acceptance criteria: Mostly pass
-- Story-level traceability to requirements: Fail
+- The epic set is now user-value-oriented without a planned corrective refactor epic.
+- The main remaining quality risk is moderate story breadth in some operational/dashboard slices, not structural epic invalidity.
 
 ## Summary and Recommendations
 
 ### Overall Readiness Status
 
-NEEDS WORK
+READY WITH MINOR REFINEMENT
 
 ### Critical Issues Requiring Immediate Action
 
-- 修正 Epic 7 内部的前向依赖，确保 `Story 7.1` 不依赖 `Story 7.2 / 7.3` 才能验收完成。
-- 为每个 story 增加明确的 requirement traceability，至少标出其实现的 FR；必要时补充 NFR / AR / UX-DR。
-- 把当前仅停留在 inventory 的 Additional Requirements / UX-DR 明确分配到可执行 stories，尤其是 `AR16`、`UX-DR3`、`UX-DR4`、`UX-DR5`、`UX-DR6`。
+- Keep the newly consolidated route/IA boundaries enforced during implementation so they do not regress back into workspace sprawl.
 
 ### Recommended Next Steps
 
-1. 先修订 [epics.md](/Users/reuszeng/Code/Projects/Yakimoji/_bmad-output/planning-artifacts/epics.md)，重排或重写 Epic 7 的 story 边界，消除同 epic 前向依赖。
-2. 为所有 stories 补充 `Implements:` 字段，并建立从 story 到 FR / NFR / AR / UX-DR 的显式映射。
-3. 新增或补强一组“设计基础 / 质量门槛” stories 或验收条款，承接 design token、responsive breakpoint、CI/CD / contract validation 等当前无人负责的要求。
-4. 修订后再次运行 implementation readiness，重点复核 story independence 和非功能 / UX 要求的落地完整性。
+1. Keep Epic 1 and Epic 2 route ownership strict during implementation: `workspace` for overview only, `tasks` and `presets` for formal flows.
+2. Hand the updated epics to dev agents with emphasis on the new Story 2.x / 3.x / 6.x boundaries.
+3. Treat Story 6.1 KPI definitions as a shared implementation contract for API, query, and dashboard layers.
+4. Use the current readiness report as the baseline and only re-run a full readiness check if scope changes again.
+
+### Recommended First Implementation Batch
+
+To maximize early user-value delivery while avoiding rework, the recommended initial story execution order is:
+
+1. `Story 1.1` - starter template and baseline project scaffolding
+2. `Story 1.2` - SSO login, local session, protected workspace shell
+3. `Story 2.1` - preset list and minimal preset creation
+4. `Story 2.2` - preset detail, editing, and subtitle preview
+5. `Story 1.3` - manual task intake with source recognition preview
+6. `Story 2.3` - familiar-source preset match
+7. `Story 2.4` - unknown-source manual resolution
+8. `Story 2.5` - task-level subtitle template override
+9. `Story 1.4` - task lifecycle state model and persistent event ledger
+10. `Story 1.5` - task list/detail views with correct route ownership
+11. `Story 1.6` - SSE status sync with polling fallback
+12. `Story 1.7` - deliverable access and secure download
+
+This sequence creates the first meaningful creator closed loop:
+
+- creator can log in
+- create and maintain presets
+- import a task
+- resolve familiar and unfamiliar source paths
+- apply a task-level subtitle override
+- see stable task state and timeline
+- receive final deliverables securely
+
+Stories that should follow this first batch, but not block it:
+
+- `Story 3.1` and `Story 3.2` for human review and failure recovery
+- `Story 4.1` to `Story 4.3` for external API parity
+- `Story 5.1` and `Story 5.2` for mobile follow-through
+- `Story 6.1` to `Story 6.3` for operations/support visibility
+
+### Sequencing Notes
+
+- `Story 2.1` and `Story 2.2` are intentionally pulled ahead of `Story 1.3` follow-up preset flows so that preset assets and formal preset routes exist before task matching logic expands.
+- `Story 1.4` is scheduled before rich task views and live sync because status, event, and failure semantics must be the single source of truth before list/detail UX and SSE behavior are layered on top.
+- `Story 1.7` comes after state/view work so deliverable visibility can land on top of an already stable task-detail boundary rather than forcing a second round of route reshaping.
 
 ### Final Note
 
-本次评估显示：PRD、Architecture、UX 与 Epic 级 FR 覆盖整体是成体系的，产品方向本身没有失控；问题集中在“stories 是否已经到可以放心开发”的最后一公里。当前识别到 `1` 个 critical issue、`3` 个 major issues、`2` 个 minor concerns，跨越 `story independence`、`traceability completeness` 和 `requirement ownership` 三类问题。
-
-在修复上述关键问题前，不建议把这套 artifacts 视为 fully implementation-ready；修复后，这套文档很接近可执行状态。
+This assessment originally identified issues across UX scope alignment, epic structure, and story sizing/acceptance quality. The planning artifacts have now been updated to remove the major structural risks and to define the remaining KPI contract explicitly. FR traceability remains strong, architecture remains ready, and the remaining work is limited to disciplined implementation rather than blocking readiness gaps.
