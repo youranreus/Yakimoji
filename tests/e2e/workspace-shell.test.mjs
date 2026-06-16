@@ -23,6 +23,7 @@ test("workspace shell copy still exposes the protected workspace and task detail
   assert.match(workspaceShell, /直接查看任务跟进/);
   assert.match(workspaceShell, /workspace-follow-through/);
   assert.match(workspaceShell, /workspace-panel-slot-detail/);
+  assert.match(workspaceShell, /请求标识：/);
   assert.doesNotMatch(workspaceShell, /request_id:\s*\{/);
   assert.match(taskListPanel, /任务列表/);
   assert.match(taskListPanel, /进入详情/);

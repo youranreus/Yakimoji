@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolveWorkspacePreview } from "../app/shared/ui/WorkspaceShell";
+import {
+  getInlineErrorRequestId,
+  resolveWorkspacePreview,
+} from "../app/shared/ui/WorkspaceShell";
 
 test("confirm inline error keeps the existing preview context visible", () => {
   const preview = {
@@ -46,4 +49,17 @@ test("confirm inline error keeps the existing preview context visible", () => {
   });
 
   assert.deepEqual(resolved, preview);
+});
+
+test("inline error helper exposes request_id for creator-facing fallback copy", () => {
+  assert.equal(
+    getInlineErrorRequestId({
+      ok: false,
+      code: "manual_resolution_invalid",
+      message: "请选择一个可用的字幕模板后再继续。",
+      request_id: "req_inline_error",
+    }),
+    "请求标识：req_inline_error",
+  );
+  assert.equal(getInlineErrorRequestId(null), null);
 });

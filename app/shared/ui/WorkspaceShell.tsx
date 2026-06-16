@@ -202,6 +202,14 @@ function getCreatedPresetSummary(presetMatch: TaskPresetMatch) {
   }
 }
 
+export function getInlineErrorRequestId(error: TaskErrorPayload | null) {
+  if (!error) {
+    return null;
+  }
+
+  return `请求标识：${error.request_id}`;
+}
+
 function isTaskPreviewPayload(value: WorkspaceFetcherData): value is TaskPreviewPayload {
   return Boolean(value && value.ok && value.mode === "preview");
 }
@@ -463,6 +471,7 @@ export function WorkspaceShell({
               <p className="feedback-title">暂时无法创建任务</p>
               <h3>请检查后重试</h3>
               <p>{activeError.message}</p>
+              <p className="field-hint">{getInlineErrorRequestId(activeError)}</p>
             </section>
           ) : null}
 

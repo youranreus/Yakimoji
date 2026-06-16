@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review in a fresh context
 
 generated: 2026-06-15T16:05:00+0800
-last_updated: 2026-06-16T00:00:00+0800
+last_updated: 2026-06-16T17:15:16+0800
 project: Yakimoji
 project_key: NOKEY
 tracking_system: file-system
@@ -54,7 +54,7 @@ development_status:
   epic-2: in-progress
   2-1-preset-list-and-minimal-preset-creation: done
   2-2-preset-detail-editing-and-subtitle-preview: done
-  2-3-resolve-preset-match-for-familiar-sources: backlog
+  2-3-resolve-preset-match-for-familiar-sources: review
   2-4-unknown-source-manual-resolution: backlog
   2-5-task-level-subtitle-template-override-on-top-of-presets: backlog
   epic-2-retrospective: optional
