@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { createElement, useId } from "react";
 import { useFetcher } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -208,6 +208,17 @@ export function getInlineErrorRequestId(error: TaskErrorPayload | null) {
   }
 
   return `请求标识：${error.request_id}`;
+}
+
+export function InlineErrorFeedback({ error }: { error: TaskErrorPayload }) {
+  return createElement(
+    "section",
+    { className: "inline-feedback inline-feedback-error", "aria-live": "polite" },
+    createElement("p", { className: "feedback-title" }, "暂时无法创建任务"),
+    createElement("h3", null, "请检查后重试"),
+    createElement("p", null, error.message),
+    createElement("p", { className: "field-hint" }, getInlineErrorRequestId(error)),
+  );
 }
 
 function isTaskPreviewPayload(value: WorkspaceFetcherData): value is TaskPreviewPayload {
@@ -466,14 +477,7 @@ export function WorkspaceShell({
             </section>
           </div>
 
-          {activeError ? (
-            <section className="inline-feedback inline-feedback-error" aria-live="polite">
-              <p className="feedback-title">暂时无法创建任务</p>
-              <h3>请检查后重试</h3>
-              <p>{activeError.message}</p>
-              <p className="field-hint">{getInlineErrorRequestId(activeError)}</p>
-            </section>
-          ) : null}
+          {activeError ? <InlineErrorFeedback error={activeError} /> : null}
 
           {preview ? (
             <section className="preview-stack" aria-live="polite">

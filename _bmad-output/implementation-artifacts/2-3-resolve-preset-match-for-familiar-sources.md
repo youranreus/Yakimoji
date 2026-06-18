@@ -1,6 +1,6 @@
 # Story 2.3: Resolve Preset Match for Familiar Sources
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -82,6 +82,11 @@ so that 我不需要每次重新确认同一套默认规则。
   - [x] 覆盖命中已有预设后的 preview baseline 与 confirm snapshot
   - [x] 覆盖任务级字幕模板覆盖只影响当前任务、不改写预设默认值
   - [x] 覆盖未命中 fallback，以及后续 `manual_reuse`、`manual_create`、`continue_without_preset` 与自动命中的区分
+
+### Review Findings
+
+- [x] [Review][Patch] 为错误态 `request_id` 渲染补上真实行为级回归覆盖，避免当前仅验证源码文本或 helper 输出 [`tests/e2e/workspace-shell.test.mjs`:26]
+- [x] [Review][Patch] 从本次变更中移除生成产物 `tsconfig.vite.tsbuildinfo`，避免无意义 churn 和后续冲突 [`tsconfig.vite.tsbuildinfo`:1]
 
 ## Dev Notes
 

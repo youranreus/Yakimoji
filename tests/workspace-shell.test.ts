@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import {
+  InlineErrorFeedback,
   getInlineErrorRequestId,
   resolveWorkspacePreview,
 } from "../app/shared/ui/WorkspaceShell";
@@ -62,4 +65,22 @@ test("inline error helper exposes request_id for creator-facing fallback copy", 
     "请求标识：req_inline_error",
   );
   assert.equal(getInlineErrorRequestId(null), null);
+});
+
+test("inline error feedback renders message and request_id together", () => {
+  const html = renderToStaticMarkup(
+    createElement(InlineErrorFeedback, {
+      error: {
+        ok: false,
+        code: "manual_resolution_invalid",
+        message: "请选择一个可用的字幕模板后再继续。",
+        request_id: "req_inline_error",
+      },
+    }),
+  );
+
+  assert.match(html, /暂时无法创建任务/);
+  assert.match(html, /请选择一个可用的字幕模板后再继续。/);
+  assert.match(html, /请求标识：req_inline_error/);
+  assert.match(html, /inline-feedback-error/);
 });
