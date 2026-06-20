@@ -5,12 +5,12 @@ import {
   loadOperationsDashboardViewModel,
   setOperationsDashboardTestHooks,
 } from "../app/features/operations/server/operations-dashboard.server";
-import { createRequestContext, runWithRequestContext } from "../app/features/auth/server/request-context.server";
+import {
+  createRequestContext,
+  runWithRequestContext,
+} from "../app/features/auth/server/request-context.server";
 
-function makeTask(
-  id: string,
-  overrides: Record<string, unknown> = {},
-) {
+function makeTask(id: string, overrides: Record<string, unknown> = {}) {
   return {
     id,
     intakeMethod: "youtube_link",
@@ -58,7 +58,7 @@ test.beforeEach(() => {
   setOperationsDashboardTestHooks({});
 });
 
-test("operations dashboard aggregates preset paths, repeat misses, timings and friction into readable cards", async () => {
+test("operations dashboard builds official 6.1 KPI cards and preset outcome drill-downs", async () => {
   let capturedTaskLimit: number | undefined;
   const taskRows = [
     makeTask("matched_1", {
@@ -68,38 +68,51 @@ test("operations dashboard aggregates preset paths, repeat misses, timings and f
     }),
     makeTask("manual_reuse_1", {
       presetSnapshot: { status: "manual_reuse", summary: "手动复用已有预设" },
+      status: "processing",
       updatedAt: new Date("2026-06-10T04:00:00.000Z"),
     }),
-    makeTask("miss_1", {
-      sourceIdentifier: "youtube:repeat-channel",
-      sourceSnapshot: { title: "Repeat Channel" },
-      presetSnapshot: { status: "continue_without_preset", summary: "未命中后继续" },
+    makeTask("manual_create_1", {
+      presetSnapshot: { status: "manual_create", summary: "新建最小预设后继续" },
+      status: "processing",
       updatedAt: new Date("2026-06-10T05:00:00.000Z"),
     }),
-    makeTask("miss_2", {
-      sourceIdentifier: "youtube:repeat-channel",
-      sourceSnapshot: { title: "Repeat Channel" },
-      presetSnapshot: { status: "unresolved", summary: "仍待预设决策" },
+    makeTask("continue_1", {
+      presetSnapshot: { status: "continue_without_preset", summary: "未使用预设继续" },
+      status: "awaiting_preset_decision",
       updatedAt: new Date("2026-06-10T06:00:00.000Z"),
+    }),
+    makeTask("failed_1", {
+      presetSnapshot: { status: "matched", summary: "自动命中已有预设" },
+      status: "failed",
+      updatedAt: new Date("2026-06-10T07:00:00.000Z"),
     }),
   ];
 
   const events = [
-    makeEvent("matched_1", "task.queued", "2026-06-10T00:10:00.000Z"),
+    makeEvent("matched_1", "task.queued", "2026-06-10T00:10:00.000Z", {
+      toStatus: "queued",
+    }),
     makeEvent("matched_1", "task.completed", "2026-06-10T01:10:00.000Z", {
+      fromStatus: "processing",
       toStatus: "completed",
     }),
     makeEvent("manual_reuse_1", "task.processing", "2026-06-10T00:20:00.000Z"),
-    makeEvent("manual_reuse_1", "task.retry_requested", "2026-06-10T01:20:00.000Z"),
-    makeEvent("miss_1", "task.preset_decision_requested", "2026-06-10T00:05:00.000Z", {
-      toStatus: "awaiting_preset_decision",
+    makeEvent("manual_create_1", "task.processing", "2026-06-10T00:50:00.000Z"),
+    makeEvent(
+      "continue_1",
+      "task.preset_decision_requested",
+      "2026-06-10T00:05:00.000Z",
+      {
+        toStatus: "awaiting_preset_decision",
+      },
+    ),
+    makeEvent("failed_1", "task.queued", "2026-06-10T00:15:00.000Z", {
+      toStatus: "queued",
     }),
-    makeEvent("miss_1", "task.failed", "2026-06-10T00:30:00.000Z", {
+    makeEvent("failed_1", "task.failed", "2026-06-10T00:40:00.000Z", {
+      fromStatus: "processing",
       toStatus: "failed",
       reasonCode: "worker_timeout",
-    }),
-    makeEvent("miss_2", "task.review_required", "2026-06-10T00:25:00.000Z", {
-      toStatus: "awaiting_human_review",
     }),
   ];
 
@@ -139,44 +152,47 @@ test("operations dashboard aggregates preset paths, repeat misses, timings and f
       }),
   );
 
-  assert.equal(model.metricCards.length, 5);
   assert.equal(capturedTaskLimit, 200);
-  assert.equal(model.metricCards[0]?.title, "自动命中与复用占比");
-  assert.match(model.metricCards[0]?.value ?? "", /50%/);
+  assert.equal(model.metricCards.length, 5);
+  assert.equal(model.metricCards[0]?.title, "预设命中率");
   assert.equal(
     model.metricCards[0]?.drilldownHref,
-    "/operations?filter=preset_group&presetGroup=resolved",
+    "/operations?filter=metric_scope&metricScope=matched_existing_preset",
   );
-  assert.equal(model.metricCards[1]?.title, "反复未命中来源");
-  assert.match(model.metricCards[1]?.value ?? "", /1 个来源/);
+  assert.match(model.metricCards[0]?.value ?? "", /40%/);
+  assert.equal(model.metricCards[1]?.title, "预设复用率");
+  assert.match(model.metricCards[1]?.value ?? "", /60%/);
+  assert.match(model.metricCards[1]?.explanation ?? "", /不把“新建预设后继续”/);
+  assert.equal(model.metricCards[2]?.title, "导入到进入处理耗时");
+  assert.match(model.metricCards[2]?.value ?? "", /中位/);
+  assert.match(model.metricCards[2]?.supportingText ?? "", /完成耗时/);
+  assert.equal(model.metricCards[3]?.title, "人工介入任务占比");
+  assert.match(model.metricCards[3]?.value ?? "", /20%/);
+  assert.equal(model.metricCards[4]?.title, "失败或中断任务占比");
+  assert.match(model.metricCards[4]?.value ?? "", /20%/);
+
+  assert.equal(model.pathBreakdown.length, 5);
+  assert.equal(model.pathBreakdown[0]?.label, "自动命中已有预设");
+  assert.equal(model.pathBreakdown[0]?.count, 2);
   assert.equal(
-    model.metricCards[1]?.drilldownHref,
-    "/operations?filter=preset_group&presetGroup=missed",
+    model.pathBreakdown[3]?.drilldownHref,
+    "/operations?filter=preset_path&presetPath=continue_without_preset",
   );
-  assert.match(model.metricCards[2]?.explanation ?? "", /queued\/processing/);
-  assert.match(model.metricCards[3]?.supportingText ?? "", /completed 事件/);
-  assert.match(model.metricCards[4]?.value ?? "", /等待预设决策|人工确认|处理失败|恢复重试/);
-  assert.equal(
-    model.metricCards[4]?.drilldownHref,
-    "/operations?filter=abnormal_type&abnormalType=preset_decision",
-  );
-  assert.equal(model.topMissSources[0]?.sourceIdentifier, "youtube:repeat-channel");
-  assert.equal(model.topMissSources[0]?.missCount, 2);
-  assert.equal(model.drilldown.taskList.data.length, 4);
-  assert.match(model.drilldown.taskList.data[2]?.presetPathLabel ?? "", /未命中/);
+
+  assert.equal(model.drilldown.taskList.data.length, 5);
+  assert.equal(model.drilldown.taskList.data[0]?.id, "matched_1");
+  assert.equal(model.drilldown.taskList.data[0]?.presetOutcomeLabel, "自动命中已有预设");
+  assert.ok(model.drilldown.taskList.data[0]?.enteredProcessingAt);
+  assert.ok(model.drilldown.taskList.data[0]?.completedAt);
 });
 
-test("operations dashboard drill-down filters the task list and keeps readable empty states when no samples are computable", async () => {
+test("operations dashboard drill-down keeps timing samples only and surfaces empty copy when events are missing", async () => {
   const taskRows = [
     makeTask("t1", {
-      presetSnapshot: { status: "continue_without_preset", summary: "未命中后继续" },
-      sourceIdentifier: "youtube:no-preset",
-      sourceSnapshot: { title: "No Preset Channel" },
-    }),
-  ];
-  const events = [
-    makeEvent("t1", "task.preset_decision_requested", "2026-06-10T00:05:00.000Z", {
-      toStatus: "awaiting_preset_decision",
+      presetSnapshot: { status: "continue_without_preset", summary: "未使用预设继续" },
+      sourceIdentifier: "youtube:no-events",
+      sourceSnapshot: { title: "No Events Channel" },
+      status: "created",
     }),
   ];
 
@@ -194,7 +210,7 @@ test("operations dashboard drill-down filters the task list and keeps readable e
     getCurrentUserRolesImpl: async () => ["ops"],
     requireAnyRoleImpl: async () => ["ops"],
     listOperationTasksImpl: async () => taskRows,
-    listOperationTaskEventsImpl: async () => events,
+    listOperationTaskEventsImpl: async () => [],
   });
 
   const model = await runWithRequestContext(
@@ -204,7 +220,7 @@ test("operations dashboard drill-down filters the task list and keeps readable e
     async () =>
       loadOperationsDashboardViewModel({
         request: new Request(
-          "http://localhost:3000/operations?filter=source&source=youtube:no-preset",
+          "http://localhost:3000/operations?filter=metric_scope&metricScope=timing_samples",
         ),
         context: {
           requestId: "req_operations_filter",
@@ -215,28 +231,24 @@ test("operations dashboard drill-down filters the task list and keeps readable e
   );
 
   assert.match(model.metricCards[2]?.value ?? "", /暂无足够数据/);
-  assert.match(model.metricCards[3]?.value ?? "", /暂无足够数据/);
-  assert.equal(model.drilldown.taskList.data.length, 1);
-  assert.match(model.drilldown.activeLabel, /youtube:no-preset/);
-  assert.match(model.drilldown.taskList.data[0]?.operationsInsight ?? "", /等待预设决策/);
+  assert.equal(model.drilldown.taskList.data.length, 0);
+  assert.match(model.drilldown.activeLabel, /关键耗时样本/);
 });
 
-test("operations dashboard supports abnormal type drill-down and clamps out-of-range pages", async () => {
+test("operations dashboard supports preset-path drill-down and clamps out-of-range pages", async () => {
   const taskRows = [
-    makeTask("failed_1", {
-      status: "failed",
+    makeTask("reuse_1", {
+      presetSnapshot: { status: "manual_reuse", summary: "手动复用已有预设" },
       updatedAt: new Date("2026-06-10T05:00:00.000Z"),
     }),
-    makeTask("retry_1", {
+    makeTask("reuse_2", {
+      presetSnapshot: { status: "manual_reuse", summary: "手动复用已有预设" },
       updatedAt: new Date("2026-06-10T04:00:00.000Z"),
     }),
   ];
   const events = [
-    makeEvent("failed_1", "task.failed", "2026-06-10T00:30:00.000Z", {
-      toStatus: "failed",
-      reasonCode: "worker_timeout",
-    }),
-    makeEvent("retry_1", "task.retry_requested", "2026-06-10T00:20:00.000Z"),
+    makeEvent("reuse_1", "task.processing", "2026-06-10T00:30:00.000Z"),
+    makeEvent("reuse_2", "task.processing", "2026-06-10T00:20:00.000Z"),
   ];
 
   setOperationsDashboardTestHooks({
@@ -258,24 +270,24 @@ test("operations dashboard supports abnormal type drill-down and clamps out-of-r
 
   const model = await runWithRequestContext(
     createRequestContext({
-      "x-request-id": "req_operations_abnormal",
+      "x-request-id": "req_operations_reuse",
     }),
     async () =>
       loadOperationsDashboardViewModel({
         request: new Request(
-          "http://localhost:3000/operations?filter=abnormal_type&abnormalType=failed&page=999",
+          "http://localhost:3000/operations?filter=preset_path&presetPath=manual_reuse&page=999",
         ),
         context: {
-          requestId: "req_operations_abnormal",
+          requestId: "req_operations_reuse",
           releaseStage: "test",
           serviceName: "yakimoji",
         },
       }),
   );
 
-  assert.equal(model.drilldown.taskList.data.length, 1);
-  assert.equal(model.drilldown.taskList.data[0]?.id, "failed_1");
-  assert.match(model.drilldown.activeLabel, /异常类型筛选：处理失败/);
+  assert.equal(model.drilldown.taskList.data.length, 2);
+  assert.equal(model.drilldown.taskList.data[0]?.presetOutcomeLabel, "手动复用已有预设");
+  assert.match(model.drilldown.activeLabel, /手动复用已有预设/);
   assert.equal(model.drilldown.taskList.meta.pagination.page, 1);
   assert.equal(model.drilldown.taskList.meta.pagination.totalPages, 1);
 });

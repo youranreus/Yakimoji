@@ -278,33 +278,31 @@ GPT-5 Codex
 ### Debug Log References
 
 - create-story workflow executed manually with customization fallback because local `python3` lacks stdlib `tomllib`
-- 2026-06-13: implemented `/operations` route, centralized `ops/admin` authorization, ops read model, and dashboard drill-down task list
+- 2026-06-20: rebuilt the `/operations` dashboard around the official Story 6.1 KPI scope and removed the mixed-in 6.2-style non-match source panel from the primary view
 - Validation commands: `pnpm typecheck`, `pnpm test`, `pnpm build`
 
 ### Completion Notes List
 
-- Added a dedicated ops-only `/operations` route and centralized `requireAnyRole()` authorization path for `ops`/`admin`
-- Implemented first-pass operations dashboard aggregation over `tasks` and `task_events`, including preset coverage, repeat misses, start/completion timing, and friction signals
-- Added same-page drill-down filtering to task lists so metrics and repeat-miss rows can narrow by preset path, source, or friction type without using creator-only workspace paths
-- Added regression coverage for ops dashboard aggregation, route access, admin bypass, and UI structure; verified with `pnpm typecheck`, `pnpm test`, and `pnpm build`
-- Story intentionally stays within 6.1 scope; task-level audit querying remains deferred to Story 6.2
+- Reworked the ops dashboard to match the official Story 6.1 KPI contract: preset hit rate, preset reuse rate, import-to-processing timing, human-intervention rate, and failure/interruption rate
+- Kept the ops-only `/operations` route and shared `ops`/`admin` authorization path, while tightening the dashboard summary copy to explain the first-version KPI scope clearly
+- Replaced the old mixed 6.1/6.2 “repeat non-match sources” primary panel with a preset outcome breakdown that preserves the five allowed continuation paths and their drill-down entry points
+- Expanded the drill-down task table to show task id, source identifier, preset outcome, current status, created time, and key stage timestamps exactly as Story 6.1 requires
+- Rewrote regression tests around the official KPI definitions and verified the rebuilt implementation with `pnpm typecheck`, `pnpm test`, and `pnpm build`
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/6-1-operations-visibility-dashboard-for-preset-reuse-and-task-flow.md`
+- `_bmad-output/implementation-artifacts/6-1-core-operations-kpi-overview.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `app/app.css`
-- `app/features/auth/server/authz.server.ts`
 - `app/features/operations/components/OperationsDashboardScreen.tsx`
 - `app/features/operations/components/OperationsDrilldownTable.tsx`
 - `app/features/operations/components/OperationsMetricCards.tsx`
 - `app/features/operations/server/operations-dashboard.server.ts`
-- `app/routes.ts`
-- `app/routes/operations.tsx`
 - `tests/operations-dashboard.test.ts`
 - `tests/operations-route.test.ts`
-- `tsconfig.vite.tsbuildinfo`
 
 ## Change Log
 
 - 2026-06-13: delivered the first-pass operations visibility dashboard with ops/admin authorization, server-side aggregations, drill-down task filtering, and regression coverage
+- 2026-06-20: rebuilt the dashboard against the official Story 6.1 KPI definitions and synchronized the BMAD implementation artifact naming with sprint-status

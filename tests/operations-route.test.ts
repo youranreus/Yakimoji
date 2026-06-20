@@ -31,9 +31,11 @@ test("operations route manifest and UI copy keep the ops-only dashboard entry po
   assert.match(routes, /route\("operations", "routes\/operations\.tsx"\)/);
   assert.match(routeModule, /当前账号没有运营面板访问权限/);
   assert.match(server, /运营可见性判断台/);
-  assert.match(screen, /反复未命中来源/);
+  assert.match(screen, /预设结果分布/);
+  assert.match(server, /预设命中率/);
   assert.match(cards, /查看相关任务/);
   assert.match(table, /相关任务列表/);
+  assert.match(table, /关键阶段时间戳/);
   assert.match(appCss, /\.operations-metric-grid/);
   assert.match(appCss, /\.operations-task-table/);
 });

@@ -61,11 +61,12 @@ export function OperationsDrilldownTable({
           <table className="operations-task-table">
             <thead>
               <tr>
-                <th scope="col">任务</th>
-                <th scope="col">预设路径</th>
+                <th scope="col">任务与来源</th>
+                <th scope="col">预设结果</th>
                 <th scope="col">当前状态</th>
-                <th scope="col">运营判断</th>
-                <th scope="col">最近更新时间</th>
+                <th scope="col">创建时间</th>
+                <th scope="col">关键阶段时间戳</th>
+                <th scope="col">运营信号</th>
               </tr>
             </thead>
             <tbody>
@@ -73,18 +74,25 @@ export function OperationsDrilldownTable({
                 <tr key={task.id}>
                   <td>
                     <div className="operations-task-cell">
+                      <p className="operations-task-id">{task.id}</p>
                       <p className="operations-task-title">{task.sourceTitle}</p>
                       <p className="operations-task-subtitle">{task.sourceIdentifier}</p>
                     </div>
                   </td>
-                  <td>{task.presetPathLabel}</td>
+                  <td>{task.presetOutcomeLabel}</td>
                   <td>
                     <span className={`status-pill status-pill-${task.statusTone}`}>
                       {task.statusLabel}
                     </span>
                   </td>
-                  <td>{task.operationsInsight}</td>
-                  <td>{formatTaskDate(task.updatedAt)}</td>
+                  <td>{formatTaskDate(task.createdAt)}</td>
+                  <td>
+                    <div className="operations-task-timestamps">
+                      <p>进入处理：{task.enteredProcessingAt ? formatTaskDate(task.enteredProcessingAt) : "暂无"}</p>
+                      <p>处理完成：{task.completedAt ? formatTaskDate(task.completedAt) : "暂无"}</p>
+                    </div>
+                  </td>
+                  <td>{task.operationsSignal}</td>
                 </tr>
               ))}
             </tbody>

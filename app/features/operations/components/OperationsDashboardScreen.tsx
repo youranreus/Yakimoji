@@ -8,13 +8,6 @@ type OperationsDashboardScreenProps = {
   loaderData: OperationsDashboardViewModel;
 };
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("zh-CN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
 export function OperationsDashboardScreen({
   loaderData,
 }: OperationsDashboardScreenProps) {
@@ -69,38 +62,32 @@ export function OperationsDashboardScreen({
         <article className="shell-panel operations-miss-panel" aria-labelledby="operations-miss-title">
           <div className="task-panel-header">
             <div>
-              <p className="eyebrow">Source Coverage</p>
-              <h2 id="operations-miss-title">反复未命中来源</h2>
+              <p className="eyebrow">Preset Outcomes</p>
+              <h2 id="operations-miss-title">预设结果分布</h2>
             </div>
-            <p className="task-panel-copy">优先找出哪些来源频道还没有被沉淀成可复用资产。</p>
+            <p className="task-panel-copy">
+              保留各条预设路径的数量与定义，帮助运营判断是自动命中、资产复用，还是仍需继续补沉淀。
+            </p>
           </div>
 
-          {loaderData.topMissSources.length === 0 ? (
-            <p className="operations-empty-copy">暂无足够数据，当前没有明确的反复未命中来源。</p>
+          {loaderData.pathBreakdown.length === 0 ? (
+            <p className="operations-empty-copy">暂无足够数据，当前没有可用于判断预设结果的任务样本。</p>
           ) : (
             <div className="operations-source-list">
-              {loaderData.topMissSources.map((source) => (
+              {loaderData.pathBreakdown.map((item) => (
                 <a
-                  key={source.sourceIdentifier}
+                  key={item.path}
                   className="operations-source-row"
-                  href={source.drilldownHref}
+                  href={item.drilldownHref}
                 >
                   <div>
-                    <p className="operations-source-title">{source.sourceTitle}</p>
-                    <p className="operations-source-subtitle">{source.sourceIdentifier}</p>
+                    <p className="operations-source-title">{item.label}</p>
+                    <p className="operations-source-subtitle">{item.supportingText}</p>
                   </div>
                   <dl className="operations-source-meta">
                     <div>
-                      <dt>未命中次数</dt>
-                      <dd>{source.missCount}</dd>
-                    </div>
-                    <div>
-                      <dt>最近路径</dt>
-                      <dd>{source.latestPathLabel}</dd>
-                    </div>
-                    <div>
-                      <dt>最近出现</dt>
-                      <dd>{formatDate(source.latestSeenAt)}</dd>
+                      <dt>任务数</dt>
+                      <dd>{item.count}</dd>
                     </div>
                   </dl>
                 </a>

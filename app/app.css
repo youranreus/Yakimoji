@@ -1248,6 +1248,14 @@ body {
   font-weight: 700;
 }
 
+.operations-task-id {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .operations-source-subtitle,
 .operations-task-subtitle {
   margin: 0.25rem 0 0;
@@ -1309,7 +1317,19 @@ body {
 }
 
 .operations-task-cell {
+  display: grid;
+  gap: 0.25rem;
   min-width: 12rem;
+}
+
+.operations-task-timestamps {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 11rem;
+}
+
+.operations-task-timestamps p {
+  margin: 0;
 }
 
 .task-empty-state h3 {
