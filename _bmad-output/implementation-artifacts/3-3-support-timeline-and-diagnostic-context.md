@@ -128,4 +128,3 @@ Decision:
 - 2026-06-08: Story artifact created from Epic 3 / Story 3.3 context.
 - 2026-06-08: Implemented support diagnostic detail mode, support-only shell separation, and timeline/query regression coverage.
 - 2026-06-08: BMAD code review completed with approval.
-- 2026-06-20: Reconciled BMAD sprint tracking so sprint-status reflects the completed 3.3 support diagnostic delivery.
