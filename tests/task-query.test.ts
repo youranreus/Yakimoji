@@ -179,6 +179,72 @@ test("task detail returns an oldest-to-newest event ledger and readable status s
   assert.equal(detail.events.at(-1)?.stageState, "attention");
 });
 
+test("task detail surfaces readable semantics for manual_create decisions", async () => {
+  const task = makeTask(6, {
+    status: "processing",
+    presetSnapshot: {
+      status: "manual_create",
+      summary: "已为当前来源创建最小预设「新频道模板」并继续当前任务：英译中字幕 / 新频道模板 / mp4 + srt",
+      defaults: {
+        subtitleTemplate: "新频道模板",
+      },
+    },
+    processingBaselineSnapshot: {
+      translationMode: "英译中字幕",
+      subtitleTemplate: "新频道模板",
+      outputPackage: "mp4 + srt",
+    },
+  });
+
+  setTaskQueryTestHooks({
+    getTaskRowForUserImpl: async () => task,
+    getTaskEventLedgerImpl: async () => [],
+    getLatestTaskEventForTaskImpl: async () => null,
+    listDeliverablesForTaskDetailImpl: async () => [],
+  });
+
+  const detail = await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_detail_manual_create",
+    }),
+    async () => getTaskDetailForUser(7, "task_6"),
+  );
+
+  assert.equal(detail.presetContextLabel, "新建最小预设后继续");
+  assert.match(detail.presetContextSummary, /创建最小预设/);
+  assert.equal(detail.subtitleTemplateContextLabel, "沿用预设默认模板");
+  assert.match(detail.subtitleTemplateContextSummary, /新频道模板/);
+});
+
+test("task detail surfaces readable semantics for continue_without_preset decisions", async () => {
+  const task = makeTask(7, {
+    status: "queued",
+    presetSnapshot: {
+      status: "continue_without_preset",
+      summary: "未保存频道预设，继续使用当前默认处理基线：中译中 / 标准模板 / SRT",
+    },
+  });
+
+  setTaskQueryTestHooks({
+    getTaskRowForUserImpl: async () => task,
+    getTaskEventLedgerImpl: async () => [],
+    getLatestTaskEventForTaskImpl: async () => null,
+    listDeliverablesForTaskDetailImpl: async () => [],
+  });
+
+  const detail = await runWithRequestContext(
+    createRequestContext({
+      "x-request-id": "req_detail_continue_without_preset",
+    }),
+    async () => getTaskDetailForUser(7, "task_7"),
+  );
+
+  assert.equal(detail.presetContextLabel, "未保存预设继续");
+  assert.match(detail.presetContextSummary, /未保存频道预设/);
+  assert.equal(detail.subtitleTemplateContextLabel, "使用当前处理基线");
+  assert.match(detail.subtitleTemplateContextSummary, /标准模板/);
+});
+
 test("completed task with time-expired ready deliverables surfaces expired result semantics", async () => {
   const task = makeTask(2, {
     status: "completed",

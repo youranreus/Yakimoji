@@ -713,7 +713,7 @@ export function WorkspaceShell({
                           <span className="field-error">{activeError.message}</span>
                         ) : null}
                       </label>
-                      <button className="primary-action" type="submit">
+                      <button className="secondary-action" type="submit">
                         {confirmFetcher.state !== "idle" ? "正在创建..." : "创建预设并继续"}
                       </button>
                     </confirmFetcher.Form>
