@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Story Runner"
+  short_description: "按顺序跑完多个 BMAD story 的完整交付与提交流程"
+  default_prompt: "Use $bmad-story-runner to run one or more BMAD stories sequentially, fully finishing each story before starting the next."
