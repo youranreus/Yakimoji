@@ -132,6 +132,20 @@ export type TaskSupportDiagnosticsView = {
   presetReasonCategory: string | null;
   currentTaskId: string;
   entries: TaskSupportDiagnosticEntry[];
+  manualHistory: TaskSupportHistoryEntry[];
+  retentionWindowLabel: string;
+  partialHistory: boolean;
+};
+
+export type TaskSupportHistoryEntry = {
+  id: string;
+  type: "review_requested" | "review_resolved" | "manual_intervention";
+  label: string;
+  detail: string;
+  taskContext: string;
+  actorLabel: string;
+  requestId: string;
+  occurredAt: string;
 };
 
 export type TaskDetailView = {
@@ -704,6 +718,8 @@ function buildSupportDiagnostics(
     typeof presetDecisionEvent?.reasonCode === "string" && presetDecisionEvent.reasonCode
       ? presetDecisionEvent.reasonCode
       : null;
+  const partialHistory =
+    Date.now() - task.createdAt.getTime() > 30 * 24 * 60 * 60 * 1000;
 
   return {
     accessLabel: "Support Diagnostic View",
@@ -717,7 +733,127 @@ function buildSupportDiagnostics(
     presetReasonCategory,
     currentTaskId: task.id,
     entries: buildSupportDiagnosticEntries(events),
+    manualHistory: buildSupportHistoryEntries(task.id, attempt, events),
+    retentionWindowLabel: "当前展示该任务可查询到的人工处理记录。",
+    partialHistory,
   };
+}
+
+function getSupportHistoryActorLabel(actorUserId: number | null) {
+  return actorUserId == null ? "system" : `user:${actorUserId}`;
+}
+
+function getReviewResolutionDetail(payload: Record<string, unknown>) {
+  const resolvedItems = Array.isArray(payload.resolvedItems) ? payload.resolvedItems : [];
+
+  if (resolvedItems.length === 0) {
+    return "创作者已提交人工确认结果。";
+  }
+
+  const approvedCount = resolvedItems.filter((item) => {
+    if (typeof item !== "object" || item == null) {
+      return false;
+    }
+
+    return (item as Record<string, unknown>).decision === "approve";
+  }).length;
+  const needsAttentionCount = resolvedItems.length - approvedCount;
+
+  return `已提交 ${resolvedItems.length} 条确认结果，其中 ${approvedCount} 条通过，${needsAttentionCount} 条需关注。`;
+}
+
+function getReviewRequestDetail(payload: Record<string, unknown>) {
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  const summary =
+    typeof payload.summary === "string" && payload.summary.trim()
+      ? payload.summary.trim()
+      : null;
+
+  if (summary) {
+    return summary;
+  }
+
+  if (items.length > 0) {
+    return `系统标记了 ${items.length} 个低置信度片段，等待人工确认。`;
+  }
+
+  return "系统检测到需要人工确认的内容。";
+}
+
+function buildSupportHistoryEntries(
+  taskId: string,
+  attempt: TaskAttemptSnapshot,
+  events: TaskEventRecord[],
+): TaskSupportHistoryEntry[] {
+  return events
+    .filter((event) =>
+      [
+        "task.review_required",
+        "task.human_review_requested",
+        "task.review_resolved",
+        "task.manual_intervention",
+      ].includes(event.eventType),
+    )
+    .map((event) => {
+      if (
+        event.eventType === "task.review_required" ||
+        event.eventType === "task.human_review_requested"
+      ) {
+        return {
+          id: event.id,
+          type: "review_requested" as const,
+          label: "人工确认已请求",
+          detail: getReviewRequestDetail(event.payload),
+          taskContext: `task ${taskId} / attempt ${attempt.attemptNumber}`,
+          actorLabel: getSupportHistoryActorLabel(event.actorUserId),
+          requestId: event.requestId,
+          occurredAt: event.createdAt.toISOString(),
+        };
+      }
+
+      if (event.eventType === "task.review_resolved") {
+        return {
+          id: event.id,
+          type: "review_resolved" as const,
+          label: "人工确认已提交",
+          detail: getReviewResolutionDetail(event.payload),
+          taskContext: `task ${taskId} / attempt ${attempt.attemptNumber}`,
+          actorLabel: getSupportHistoryActorLabel(event.actorUserId),
+          requestId: event.requestId,
+          occurredAt: event.createdAt.toISOString(),
+        };
+      }
+
+      if (event.eventType === "task.manual_intervention") {
+        return {
+          id: event.id,
+          type: "manual_intervention" as const,
+          label: "人工介入已记录",
+          detail:
+            typeof event.payload.note === "string" && event.payload.note.trim()
+              ? event.payload.note.trim()
+              : "系统记录了一次人工处理动作。",
+          taskContext: `task ${taskId} / attempt ${attempt.attemptNumber}`,
+          actorLabel: getSupportHistoryActorLabel(event.actorUserId),
+          requestId: event.requestId,
+          occurredAt: event.createdAt.toISOString(),
+        };
+      }
+
+      return {
+        id: event.id,
+        type: "manual_intervention" as const,
+        label: "人工介入已记录",
+        detail:
+          typeof event.payload.note === "string" && event.payload.note.trim()
+            ? event.payload.note.trim()
+            : "系统记录了一次人工处理动作。",
+        taskContext: `task ${taskId} / attempt ${attempt.attemptNumber}`,
+        actorLabel: getSupportHistoryActorLabel(event.actorUserId),
+        requestId: event.requestId,
+        occurredAt: event.createdAt.toISOString(),
+      };
+    });
 }
 
 async function getLatestTaskEventForTask(

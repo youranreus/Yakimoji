@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import type { TaskDetailView } from "../server/task-query.server";
 import { TaskDetailTimeline } from "./TaskDetailTimeline";
 import { TaskSupportFailureCard } from "./TaskSupportFailureCard";
+import { TaskSupportHistoryCard } from "./TaskSupportHistoryCard";
 import { TaskStatusSummaryCard } from "./TaskStatusSummaryCard";
 import { TaskSupportDiagnosticsCard } from "./TaskSupportDiagnosticsCard";
 
@@ -29,6 +30,7 @@ export function TaskSupportDiagnosticScreen({
         <div className="task-audit-stack">
           <TaskStatusSummaryCard task={task} />
           <TaskSupportDiagnosticsCard task={task} />
+          <TaskSupportHistoryCard task={task} />
           <TaskSupportFailureCard task={task} />
           <TaskDetailTimeline task={task} />
 

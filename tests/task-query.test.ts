@@ -428,6 +428,29 @@ test("support detail exposes diagnostic timeline and hides deliverables", async 
         attemptNumber: 2,
       },
     }),
+    makeEvent("task_5", "task.review_required", "2026-05-26T04:05:00.000Z", {
+      fromStatus: "processing",
+      toStatus: "awaiting_human_review",
+      payload: {
+        reviewId: "review_5",
+        items: [{ id: "item_1", snippet: "待确认片段" }],
+      },
+    }),
+    makeEvent("task_5", "task.review_resolved", "2026-05-26T04:07:00.000Z", {
+      fromStatus: "awaiting_human_review",
+      toStatus: "queued",
+      payload: {
+        reviewId: "review_5",
+        resolvedItems: [{ itemId: "item_1", decision: "approve" }],
+      },
+    }),
+    makeEvent("task_5", "task.manual_intervention", "2026-05-26T04:09:00.000Z", {
+      fromStatus: "queued",
+      toStatus: "queued",
+      payload: {
+        note: "支持人员补充了人工排障记录。",
+      },
+    }),
     makeEvent("task_5", "task.failed", "2026-05-26T04:12:00.000Z", {
       fromStatus: "processing",
       toStatus: "failed",
@@ -463,7 +486,11 @@ test("support detail exposes diagnostic timeline and hides deliverables", async 
   assert.equal(detail.supportDiagnostics?.currentTaskId, "task_5");
   assert.equal(detail.supportDiagnostics?.presetReasonCategory, "preset_not_found");
   assert.match(detail.supportDiagnostics?.presetReason ?? "", /未命中现有预设/);
-  assert.equal(detail.supportDiagnostics?.entries.length, 4);
+  assert.equal(detail.supportDiagnostics?.entries.length, 6);
+  assert.equal(detail.supportDiagnostics?.manualHistory.length, 3);
+  assert.equal(detail.supportDiagnostics?.manualHistory[0]?.label, "人工确认已请求");
+  assert.equal(detail.supportDiagnostics?.manualHistory[1]?.label, "人工确认已提交");
+  assert.equal(detail.supportDiagnostics?.manualHistory[2]?.label, "人工介入已记录");
   assert.equal(detail.deliverables.length, 0);
   assert.equal(detail.resultStatus.label, "诊断视图");
 });

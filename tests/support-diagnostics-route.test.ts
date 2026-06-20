@@ -22,12 +22,18 @@ test.beforeEach(() => {
 test("support diagnostics route is registered as a dedicated support entry point", () => {
   const routes = readText("app/routes.ts");
   const routeModule = readText("app/routes/support.tasks.$taskId.diagnostics.tsx");
+  const historyRouteModule = readText("app/routes/support.tasks.$taskId.history.tsx");
 
   assert.match(
     routes,
     /route\("support\/tasks\/:taskId\/diagnostics", "routes\/support\.tasks\.\$taskId\.diagnostics\.tsx"\)/,
   );
+  assert.match(
+    routes,
+    /route\("support\/tasks\/:taskId\/history", "routes\/support\.tasks\.\$taskId\.history\.tsx"\)/,
+  );
   assert.match(routeModule, /当前账号没有访问该诊断视图的权限/);
+  assert.match(historyRouteModule, /当前账号没有访问该人工记录视图的权限/);
 });
 
 test("support diagnostics loader allows support roles and returns a support-only detail model", async () => {
@@ -105,6 +111,38 @@ test("support diagnostics loader allows support roles and returns a support-only
         },
         createdAt: new Date("2026-05-26T01:10:00.000Z"),
       },
+      {
+        id: "evt_review_resolved",
+        taskId: "task_support_1",
+        eventType: "task.review_resolved",
+        fromStatus: "awaiting_human_review",
+        toStatus: "queued",
+        reasonCode: null,
+        requestId: "req_support_review",
+        actorUserId: 7,
+        payload: {
+          reviewId: "review_1",
+          resolvedItems: [
+            { itemId: "item_1", decision: "approve" },
+            { itemId: "item_2", decision: "needs_attention" },
+          ],
+        },
+        createdAt: new Date("2026-05-26T01:11:00.000Z"),
+      },
+      {
+        id: "evt_manual",
+        taskId: "task_support_1",
+        eventType: "task.manual_intervention",
+        fromStatus: "queued",
+        toStatus: "queued",
+        reasonCode: null,
+        requestId: "req_support_manual",
+        actorUserId: 19,
+        payload: {
+          note: "支持人员补充了人工处理说明。",
+        },
+        createdAt: new Date("2026-05-26T01:12:00.000Z"),
+      },
     ],
     getLatestTaskEventForTaskImpl: async () => null,
     listDeliverablesForTaskDetailImpl: async () => [],
@@ -129,7 +167,10 @@ test("support diagnostics loader allows support roles and returns a support-only
   assert.equal(model.supportDiagnostics?.presetResolution, "continue_without_preset");
   assert.equal(model.supportDiagnostics?.presetReasonCategory, "preset_not_found");
   assert.match(model.supportDiagnostics?.presetReason ?? "", /未命中现有预设/);
-  assert.equal(model.supportDiagnostics?.entries.length, 3);
+  assert.equal(model.supportDiagnostics?.entries.length, 4);
+  assert.equal(model.supportDiagnostics?.manualHistory.length, 2);
+  assert.equal(model.supportDiagnostics?.manualHistory[0]?.label, "人工确认已提交");
+  assert.equal(model.supportDiagnostics?.manualHistory[1]?.label, "人工介入已记录");
 });
 
 test("support diagnostics loader rejects creator-only sessions", async () => {
