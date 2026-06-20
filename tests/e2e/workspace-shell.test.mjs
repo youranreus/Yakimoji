@@ -43,12 +43,18 @@ test("route manifest keeps the workspace list and direct detail routes registere
   const taskSyncServer = readText("app/routes/workspace.task-sync.server.ts");
   const taskSyncShared = readText("app/features/tasks/task-sync.shared.ts");
   const taskSyncFeatureServer = readText("app/features/tasks/server/task-sync.server.ts");
+  const supportDiagnosticsRoute = readText("app/routes/support.tasks.$taskId.diagnostics.tsx");
 
   assert.match(routes, /route\("workspace", "routes\/workspace\.tsx"\)/);
   assert.match(routes, /route\("workspace\/tasks\/:taskId", "routes\/workspace\.task-detail\.tsx"\)/);
+  assert.match(
+    routes,
+    /route\("support\/tasks\/:taskId\/diagnostics", "routes\/support\.tasks\.\$taskId\.diagnostics\.tsx"\)/,
+  );
   assert.match(routes, /route\("workspace\/task-sync", "routes\/workspace\.task-sync\.ts"\)/);
   assert.match(taskSyncServer, /text\/event-stream/);
   assert.match(taskSyncServer, /transport === "polling"/);
   assert.match(taskSyncShared, /task\.status\.changed/);
   assert.match(taskSyncFeatureServer, /taskSyncEventName/);
+  assert.match(supportDiagnosticsRoute, /支持侧任务诊断时间线视图/);
 });

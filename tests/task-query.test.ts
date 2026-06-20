@@ -412,6 +412,14 @@ test("support detail exposes diagnostic timeline and hides deliverables", async 
       fromStatus: "created",
       toStatus: "created",
     }),
+    makeEvent("task_5", "task.preset_decision_requested", "2026-05-26T04:01:00.000Z", {
+      fromStatus: "matching_preset",
+      toStatus: "awaiting_preset_decision",
+      reasonCode: "preset_not_found",
+      payload: {
+        message: "当前来源未命中现有预设，需要人工决定如何继续。",
+      },
+    }),
     makeEvent("task_5", "task.retry_spawned", "2026-05-26T04:02:00.000Z", {
       fromStatus: "created",
       toStatus: "queued",
@@ -452,7 +460,10 @@ test("support detail exposes diagnostic timeline and hides deliverables", async 
   assert.equal(detail.failureContext?.reasonCode, "worker_timeout");
   assert.equal(detail.supportDiagnostics?.attemptNumber, 2);
   assert.equal(detail.supportDiagnostics?.originTaskId, "task_1");
-  assert.equal(detail.supportDiagnostics?.entries.length, 3);
+  assert.equal(detail.supportDiagnostics?.currentTaskId, "task_5");
+  assert.equal(detail.supportDiagnostics?.presetReasonCategory, "preset_not_found");
+  assert.match(detail.supportDiagnostics?.presetReason ?? "", /未命中现有预设/);
+  assert.equal(detail.supportDiagnostics?.entries.length, 4);
   assert.equal(detail.deliverables.length, 0);
   assert.equal(detail.resultStatus.label, "诊断视图");
 });

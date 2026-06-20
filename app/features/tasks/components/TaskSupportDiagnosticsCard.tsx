@@ -22,6 +22,14 @@ function formatPresetResolution(status: string) {
   }
 }
 
+function formatPresetReasonCategory(value: string | null) {
+  if (!value) {
+    return "未提供";
+  }
+
+  return value;
+}
+
 export function TaskSupportDiagnosticsCard({
   task,
 }: TaskSupportDiagnosticsCardProps) {
@@ -47,8 +55,24 @@ export function TaskSupportDiagnosticsCard({
           <dd>{diagnostics.attemptNumber === 1 ? "首次处理" : `第 ${diagnostics.attemptNumber} 次处理`}</dd>
         </div>
         <div>
+          <dt>当前任务 ID</dt>
+          <dd>{diagnostics.currentTaskId}</dd>
+        </div>
+        <div>
           <dt>预设处理方式</dt>
           <dd>{formatPresetResolution(diagnostics.presetResolution)}</dd>
+        </div>
+        <div>
+          <dt>未命中原因分类</dt>
+          <dd>{formatPresetReasonCategory(diagnostics.presetReasonCategory)}</dd>
+        </div>
+        <div>
+          <dt>源任务链路</dt>
+          <dd>{diagnostics.originTaskId}</dd>
+        </div>
+        <div>
+          <dt>未命中说明</dt>
+          <dd>{diagnostics.presetReason}</dd>
         </div>
       </dl>
 

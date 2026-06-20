@@ -327,7 +327,20 @@ function getSupportEntryCopy(event: TaskEventLike) {
 export function buildSupportDiagnosticEntries(
   events: TaskEventLike[],
 ): TaskSupportDiagnosticEntry[] {
-  return events.map((event) => {
+  return events
+    .filter((event) =>
+      [
+        "task.created",
+        "task.preset_decision_requested",
+        "task.review_required",
+        "task.human_review_requested",
+        "task.review_resolved",
+        "task.failed",
+        "task.retry_requested",
+        "task.retry_spawned",
+      ].includes(event.eventType),
+    )
+    .map((event) => {
     const copy = getSupportEntryCopy(event);
 
     return {

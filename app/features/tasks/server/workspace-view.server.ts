@@ -11,7 +11,6 @@ import {
 } from "../../auth/server/session.server";
 
 import {
-  getTaskDetailForSupport,
   getTaskDetailForUser,
   listPaginatedTasksForUser,
   type PaginatedTaskList,
@@ -54,7 +53,6 @@ export const workspaceViewTestHooks = {
   requireRoleImpl: requireRole,
   listPaginatedTasksForUserImpl: listPaginatedTasksForUser,
   getTaskDetailForUserImpl: getTaskDetailForUser,
-  getTaskDetailForSupportImpl: getTaskDetailForSupport,
   listChannelPresetsForUserImpl: listChannelPresetsForUser,
 };
 
@@ -71,8 +69,6 @@ export function setWorkspaceViewTestHooks(
     hooks.listPaginatedTasksForUserImpl ?? listPaginatedTasksForUser;
   workspaceViewTestHooks.getTaskDetailForUserImpl =
     hooks.getTaskDetailForUserImpl ?? getTaskDetailForUser;
-  workspaceViewTestHooks.getTaskDetailForSupportImpl =
-    hooks.getTaskDetailForSupportImpl ?? getTaskDetailForSupport;
   workspaceViewTestHooks.listChannelPresetsForUserImpl =
     hooks.listChannelPresetsForUserImpl ?? listChannelPresetsForUser;
 }
@@ -125,60 +121,28 @@ export async function loadWorkspaceViewModel(args: {
   const roles = await workspaceViewTestHooks.getCurrentUserRolesImpl(
     authenticated.user.id,
   );
-  const hasCreatorRole = roles.includes("creator");
-  const hasSupportRole = roles.includes("support");
-
-  if (hasCreatorRole) {
-    await workspaceViewTestHooks.requireRoleImpl(authenticated, "creator", {
-      type: "workspace",
-      id: "creator-home",
-    });
-  } else if (hasSupportRole && args.taskId) {
-    await workspaceViewTestHooks.requireRoleImpl(authenticated, "support", {
-      type: "workspace-support",
-      id: args.taskId,
-    });
-  } else {
-    await workspaceViewTestHooks.requireRoleImpl(authenticated, "creator", {
-      type: "workspace",
-      id: "creator-home",
-    });
-  }
+  await workspaceViewTestHooks.requireRoleImpl(authenticated, "creator", {
+    type: "workspace",
+    id: "creator-home",
+  });
 
   const page = parsePage(args.request.url);
-  const taskList = hasCreatorRole
-    ? await workspaceViewTestHooks.listPaginatedTasksForUserImpl(
-        authenticated.user.id,
-        {
-          page,
-        },
-      )
-    : ({
-        data: [],
-        meta: {
-          pagination: {
-            page,
-            pageSize: 10,
-            total: 0,
-            totalPages: 0,
-            hasNextPage: false,
-            hasPreviousPage: page > 1,
-          },
-        },
-      } satisfies PaginatedTaskList);
+  const taskList = await workspaceViewTestHooks.listPaginatedTasksForUserImpl(
+    authenticated.user.id,
+    {
+      page,
+    },
+  );
   const selectedTask = args.taskId
-    ? hasSupportRole && !hasCreatorRole
-      ? await workspaceViewTestHooks.getTaskDetailForSupportImpl(args.taskId)
-      : await workspaceViewTestHooks.getTaskDetailForUserImpl(
-          authenticated.user.id,
-          args.taskId,
-        )
-    : null;
-  const channelPresets = hasCreatorRole
-    ? await workspaceViewTestHooks.listChannelPresetsForUserImpl(
+    ? await workspaceViewTestHooks.getTaskDetailForUserImpl(
         authenticated.user.id,
+        args.taskId,
       )
-    : [];
+    : null;
+  const channelPresets =
+    await workspaceViewTestHooks.listChannelPresetsForUserImpl(
+      authenticated.user.id,
+    );
 
   return {
     requestId: args.context.requestId,

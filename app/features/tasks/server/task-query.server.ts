@@ -3,6 +3,7 @@ import { data } from "react-router";
 
 import { database } from "../../../../database/context";
 import { taskEvents, tasks } from "../../../../database/schema";
+import { requireAnyRole } from "../../auth/server/authz.server";
 import { getRequestContext } from "../../auth/server/request-context.server";
 import {
   listDeliverablesForTaskDetail,
@@ -124,10 +125,12 @@ export type TaskTimelineEventView = {
 
 export type TaskSupportDiagnosticsView = {
   accessLabel: string;
-  lookupTaskId: string;
   originTaskId: string;
   attemptNumber: number;
   presetResolution: string;
+  presetReason: string;
+  presetReasonCategory: string | null;
+  currentTaskId: string;
   entries: TaskSupportDiagnosticEntry[];
 };
 
@@ -245,6 +248,7 @@ export const taskQueryTestHooks = {
   getTaskEventLedgerImpl: getTaskEventLedger,
   getLatestTaskEventForTaskImpl: getLatestTaskEventForTask,
   listDeliverablesForTaskDetailImpl: listDeliverablesForTaskDetail,
+  requireAnyRoleImpl: requireAnyRole,
 };
 
 export function setTaskQueryTestHooks(
@@ -264,6 +268,8 @@ export function setTaskQueryTestHooks(
     hooks.getLatestTaskEventForTaskImpl ?? getLatestTaskEventForTask;
   taskQueryTestHooks.listDeliverablesForTaskDetailImpl =
     hooks.listDeliverablesForTaskDetailImpl ?? listDeliverablesForTaskDetail;
+  taskQueryTestHooks.requireAnyRoleImpl =
+    hooks.requireAnyRoleImpl ?? requireAnyRole;
 }
 
 function normalizePage(value?: number) {
@@ -687,16 +693,29 @@ function buildSupportDiagnostics(
 ): TaskSupportDiagnosticsView {
   const presetSnapshot = task.presetSnapshot as TaskPresetSnapshot | null;
   const attempt = getTaskAttemptSnapshot(task.sourceSnapshot, task.id);
+  const presetDecisionEvent = [...events]
+    .reverse()
+    .find((event) => event.eventType === "task.preset_decision_requested");
+  const presetReason =
+    typeof presetDecisionEvent?.payload.message === "string" && presetDecisionEvent.payload.message
+      ? presetDecisionEvent.payload.message
+      : "当前任务未附带更详细的预设未命中说明。";
+  const presetReasonCategory =
+    typeof presetDecisionEvent?.reasonCode === "string" && presetDecisionEvent.reasonCode
+      ? presetDecisionEvent.reasonCode
+      : null;
 
   return {
     accessLabel: "Support Diagnostic View",
-    lookupTaskId: task.id,
     originTaskId: attempt.originTaskId,
     attemptNumber: attempt.attemptNumber,
     presetResolution:
       typeof presetSnapshot?.status === "string" && presetSnapshot.status
         ? presetSnapshot.status
         : "unknown",
+    presetReason,
+    presetReasonCategory,
+    currentTaskId: task.id,
     entries: buildSupportDiagnosticEntries(events),
   };
 }
@@ -921,4 +940,24 @@ export async function getTaskDetailForSupport(taskId: string): Promise<TaskDetai
       mapTaskTimelineEvent(event, index, events.length, task.status),
     ),
   };
+}
+
+export async function loadSupportDiagnosticForAuthorizedRole(args: {
+  request: Request;
+  taskId: string;
+  authenticatedSession: {
+    user: { id: number };
+    session: { id: string };
+  };
+}) {
+  await taskQueryTestHooks.requireAnyRoleImpl(
+    args.authenticatedSession as never,
+    ["support", "ops", "admin"],
+    {
+      type: "task-support-diagnostic",
+      id: args.taskId,
+    },
+  );
+
+  return getTaskDetailForSupport(args.taskId);
 }

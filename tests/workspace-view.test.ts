@@ -189,9 +189,7 @@ test("workspace view loader resolves a direct task detail route through the shar
   assert.equal(model.panels[0]?.title, "查看重点");
 });
 
-test("support-only workspace detail resolves diagnostic access without creator task list", async () => {
-  let supportTaskId = "";
-
+test("workspace view loader rejects support-only sessions because diagnostics moved to a dedicated route", async () => {
   setWorkspaceViewTestHooks({
     requireUserSessionImpl: async () => ({
       user: {
@@ -204,84 +202,34 @@ test("support-only workspace detail resolves diagnostic access without creator t
       },
     }),
     getCurrentUserRolesImpl: async () => ["support"],
-    requireRoleImpl: async (_authenticated, role) => [role],
-    getTaskDetailForSupportImpl: async (taskId) => {
-      supportTaskId = taskId;
-
-      return {
-        id: taskId,
-        sourceTitle: "Task Support",
-        sourceIdentifier: "youtube:support_task",
-        status: "failed",
-        statusLabel: "处理失败",
-        presetContextLabel: "手动复用已有预设",
-        presetContextSummary: "手动复用预设继续",
-        baselineSummary: "中译中 / 标准模板 / SRT",
-        subtitleTemplateContextLabel: "沿用预设默认模板",
-        subtitleTemplateContextSummary: "当前任务沿用预设默认模板「标准模板」。",
-        currentStageLabel: "处理失败",
-        latestProgressLabel: "处理失败",
-        requestId: "req_support_mode",
-        createdAt: "2026-05-26T01:00:00.000Z",
-        updatedAt: "2026-05-26T01:10:00.000Z",
-        nextStepLabel: "请查看失败原因与建议动作后再继续处理",
-        statusTone: "danger",
-        accessMode: "support",
-        attempt: {
-          attemptNumber: 2,
-          originTaskId: "task_origin",
-          retryOfTaskId: "task_prev",
+    requireRoleImpl: async () => {
+      throw {
+        data: {
+          message: "当前账号没有访问该工作区的权限。",
         },
-        reviewQueue: null,
-        failureContext: {
-          stage: "字幕生成",
-          message: "外部节点超时。",
-          reasonCode: "worker_timeout",
-          diagnosticTraceId: "trace_support",
-          retryable: true,
-          recommendedAction: "创建新的恢复 attempt。",
-          supportCategory: "worker-timeout",
+        init: {
+          status: 403,
         },
-        supportDiagnostics: {
-          accessLabel: "Support Diagnostic View",
-          lookupTaskId: taskId,
-          originTaskId: "task_origin",
-          attemptNumber: 2,
-          presetResolution: "manual_reuse",
-          entries: [],
-        },
-        resultStatus: {
-          label: "诊断视图",
-          description: "当前页面用于查看任务进度、异常原因和处理记录。",
-          tone: "neutral",
-        },
-        deliverables: [],
-        stages: [],
-        events: [],
       };
     },
   });
 
-  const model = await runWithRequestContext(
-    createRequestContext({
-      "x-request-id": "req_support_mode",
-    }),
-    async () =>
-      loadWorkspaceViewModel({
-        request: new Request("http://localhost:3000/workspace/tasks/task_support"),
-        context: {
-          requestId: "req_support_mode",
-          releaseStage: "test",
-          serviceName: "yakimoji",
-        },
-        taskId: "task_support",
+  await assert.rejects(
+    runWithRequestContext(
+      createRequestContext({
+        "x-request-id": "req_support_mode",
       }),
+      async () =>
+        loadWorkspaceViewModel({
+          request: new Request("http://localhost:3000/workspace/tasks/task_support"),
+          context: {
+            requestId: "req_support_mode",
+            releaseStage: "test",
+            serviceName: "yakimoji",
+          },
+          taskId: "task_support",
+        }),
+    ),
+    (error: { init?: { status?: number } }) => error.init?.status === 403,
   );
-
-  assert.equal(supportTaskId, "task_support");
-  assert.equal(model.roles[0], "support");
-  assert.equal(model.taskList.data.length, 0);
-  assert.equal(model.channelPresets.length, 0);
-  assert.equal(model.selectedTask?.accessMode, "support");
-  assert.equal(model.selectedTask?.nextStepLabel, "请查看失败原因与建议动作后再继续处理");
 });
