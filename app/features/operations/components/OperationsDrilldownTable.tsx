@@ -1,10 +1,25 @@
 import { Link, useLocation, useNavigation } from "react-router";
 
 import { formatTaskDate } from "../../tasks/components/task-formatters";
-import type { OperationsDashboardViewModel } from "../server/operations-dashboard.server";
+import type { TaskPagination } from "../../tasks/server/task-query.server";
+import type { OperationsTaskListItem } from "../server/operations-dashboard.server";
+
+export type OperationsTaskDrilldownView = {
+  activeLabel: string;
+  helperText: string;
+  emptyTitle: string;
+  emptyBody: string;
+  resetHref: string;
+  taskList: {
+    data: OperationsTaskListItem[];
+    meta: {
+      pagination: TaskPagination;
+    };
+  };
+};
 
 type OperationsDrilldownTableProps = {
-  drilldown: OperationsDashboardViewModel["drilldown"];
+  drilldown: OperationsTaskDrilldownView;
 };
 
 function buildPageHref(currentPath: string, page: number) {
@@ -18,7 +33,7 @@ function buildPageHref(currentPath: string, page: number) {
 
   const search = url.searchParams.toString();
 
-  return search ? `/operations?${search}` : "/operations";
+  return search ? `${url.pathname}?${search}` : url.pathname;
 }
 
 export function OperationsDrilldownTable({
@@ -28,7 +43,7 @@ export function OperationsDrilldownTable({
   const navigation = useNavigation();
   const pagination = drilldown.taskList.meta.pagination;
   const pending =
-    navigation.location?.pathname === "/operations"
+    navigation.location?.pathname === location.pathname
       ? "正在刷新运营任务范围..."
       : null;
 

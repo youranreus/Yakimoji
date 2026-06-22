@@ -24,5 +24,9 @@ export default [
   route("presets/:presetId", "routes/presets.$presetId.tsx"),
   route("presets/:presetId/edit", "routes/presets.$presetId.edit.tsx"),
   route("operations", "routes/operations.tsx"),
+  route(
+    "operations/non-match-sources",
+    "routes/operations.non-match-sources.tsx",
+  ),
   route("health", "routes/health.tsx"),
 ] satisfies RouteConfig;

@@ -519,7 +519,12 @@ function buildDrilldownHref(filter: DrilldownTaskFilter, page = 1) {
 
 function buildNavigation() {
   return [
-    { label: "运营判断台", href: "/operations", state: "active" as const },
+    { label: "核心指标总览", href: "/operations", state: "active" as const },
+    {
+      label: "反复未命中频道",
+      href: "/operations/non-match-sources",
+      state: "idle" as const,
+    },
     { label: "创作者工作台", href: "/workspace", state: "idle" as const },
   ];
 }

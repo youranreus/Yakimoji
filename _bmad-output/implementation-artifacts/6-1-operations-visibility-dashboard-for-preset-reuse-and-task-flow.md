@@ -61,7 +61,7 @@ so that 我能判断 Yakimoji 的核心价值是否真的成立。
   - [x] 将预设路径分类统一映射为 `matched`、`manual_create`、`manual_reuse`、`continue_without_preset`、`unresolved` 等既有语义，避免在运营视图发明第二套枚举
   - [x] 反复未命中来源应按 `tasks.sourceIdentifier` 聚合，并用 `presetSnapshot.status in ('continue_without_preset', 'unresolved', 'none')` 或等价规则归类为未命中/未沉淀样本
   - [x] “导入到进入处理耗时”优先使用 `tasks.createdAt -> 首个 queued/processing 相关事件 createdAt`，最终完成耗时使用 `tasks.createdAt -> completed event createdAt`；缺失事件时只计入可计算样本
-  - [x] 流程摩擦点应来自 `task_events` 中失败、人工确认、retry 或预设决策请求等关键节点的聚合计数，而不是依赖还未交付的 6.2 审计查询接口
+  - [x] 流程摩擦点应来自 `task_events` 中失败、人工确认、retry 或预设决策请求等关键节点的聚合计数，而不是依赖还未交付的 6.3 审计查询接口
 
 - [x] 提供 drill-down 到任务列表的最小闭环，保证指标不是死卡片 (AC: 3, 4, 5, 8)
   - [x] 运营指标卡或聚合行必须能跳到带筛选条件的任务列表视图，至少支持按预设路径、来源频道或异常类型缩小范围
@@ -93,7 +93,7 @@ so that 我能判断 Yakimoji 的核心价值是否真的成立。
 
 - 6.1 的目标是交付“最小可用的运营判断台”，让团队能够回答“预设是否真的被复用”“哪里反复没命中”“任务卡在哪些阶段”，而不是做完整 BI 系统。
 - 第一版必须把指标、解释和 drill-down 放在一起，避免只做静态概览卡片。
-- 6.1 不应抢做 6.2 的任务级最小审计记录查询；本 story 聚焦聚合视图与任务范围下钻。
+- 6.1 不应抢做 6.3 的任务级最小审计记录查询；本 story 聚焦聚合视图与任务范围下钻。
 
 ### Business and Epic Context
 
@@ -198,7 +198,7 @@ so that 我能判断 Yakimoji 的核心价值是否真的成立。
 - 不要新增：
   - 专门的 BI SDK 集成
   - 大而全 chart abstraction
-  - 与 6.2 重叠的 task audit query API
+  - 与 6.3 重叠的 task audit query API
 
 ### Testing Requirements
 

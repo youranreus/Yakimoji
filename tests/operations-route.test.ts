@@ -22,22 +22,37 @@ test.beforeEach(() => {
 test("operations route manifest and UI copy keep the ops-only dashboard entry points visible", () => {
   const routes = readText("app/routes.ts");
   const routeModule = readText("app/routes/operations.tsx");
+  const nonMatchRouteModule = readText("app/routes/operations.non-match-sources.tsx");
   const screen = readText("app/features/operations/components/OperationsDashboardScreen.tsx");
+  const nonMatchScreen = readText(
+    "app/features/operations/components/OperationsNonMatchAnalysisScreen.tsx",
+  );
   const cards = readText("app/features/operations/components/OperationsMetricCards.tsx");
   const table = readText("app/features/operations/components/OperationsDrilldownTable.tsx");
   const server = readText("app/features/operations/server/operations-dashboard.server.ts");
+  const nonMatchServer = readText(
+    "app/features/operations/server/operations-non-match-analysis.server.ts",
+  );
   const appCss = readText("app/app.css");
 
   assert.match(routes, /route\("operations", "routes\/operations\.tsx"\)/);
+  assert.match(
+    routes,
+    /route\(\s*"operations\/non-match-sources",\s*"routes\/operations\.non-match-sources\.tsx"/,
+  );
   assert.match(routeModule, /当前账号没有运营面板访问权限/);
+  assert.match(nonMatchRouteModule, /当前账号没有未命中来源分析访问权限/);
   assert.match(server, /运营可见性判断台/);
   assert.match(screen, /预设结果分布/);
+  assert.match(nonMatchScreen, /反复未命中来源频道/);
   assert.match(server, /预设命中率/);
+  assert.match(nonMatchServer, /来源频道反复未命中分析/);
   assert.match(cards, /查看相关任务/);
   assert.match(table, /相关任务列表/);
   assert.match(table, /关键阶段时间戳/);
   assert.match(appCss, /\.operations-metric-grid/);
   assert.match(appCss, /\.operations-task-table/);
+  assert.match(appCss, /\.operations-source-row-active/);
 });
 
 test("operations dashboard loader allows admin bypass and rejects unauthorized roles through the shared authz path", async () => {
