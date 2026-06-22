@@ -4,13 +4,19 @@ import { data } from "react-router";
 import { database } from "../../../../database/context";
 import { auditLogs, taskEvents, tasks } from "../../../../database/schema";
 import { requireAnyRole } from "../../auth/server/authz.server";
+import { writeAuditLog } from "../../auth/server/audit.server";
 import { getRequestContext } from "../../auth/server/request-context.server";
 import {
   extractFailureContext,
   extractReviewQueue,
   getTaskAttemptSnapshot,
+  type TaskEventLike,
 } from "./task-diagnostics.server";
-import { getTaskCurrentStageLabel, getTaskStatusPresentation, type TaskStatus } from "./task-status.server";
+import {
+  getTaskCurrentStageLabel,
+  getTaskStatusPresentation,
+  type TaskStatus,
+} from "./task-status.server";
 
 const retentionWindowDays = 30;
 const retentionWindowMs = retentionWindowDays * 24 * 60 * 60 * 1000;
@@ -35,17 +41,9 @@ type TaskRecord = {
   updatedAt: Date;
 };
 
-type TaskEventRecord = {
-  id: string;
+type TaskEventRecord = TaskEventLike & {
   taskId: string;
-  eventType: string;
-  fromStatus: TaskStatus;
-  toStatus: TaskStatus;
-  reasonCode: string | null;
-  requestId: string;
   actorUserId: number | null;
-  payload: Record<string, unknown>;
-  createdAt: Date;
 };
 
 type AuditLogRecord = {
@@ -62,7 +60,14 @@ type AuditLogRecord = {
 
 export type TaskAuditTimelineItem = {
   id: string;
-  kind: "lifecycle" | "preset" | "review" | "failure" | "retry" | "delivery" | "access";
+  kind:
+    | "lifecycle"
+    | "preset"
+    | "review"
+    | "failure"
+    | "retry"
+    | "delivery"
+    | "support";
   label: string;
   description: string;
   taskId: string;
@@ -131,6 +136,7 @@ export type TaskAuditRecordView = {
 
 export const taskAuditTestHooks = {
   requireAnyRoleImpl: requireAnyRole,
+  writeAuditLogImpl: writeAuditLog,
   getTaskRowByIdImpl: getTaskRowById,
   getTaskEventLedgerImpl: getTaskEventLedger,
   listAuditLogEntriesImpl: listAuditLogEntries,
@@ -138,11 +144,16 @@ export const taskAuditTestHooks = {
 
 export function setTaskAuditTestHooks(hooks: Partial<typeof taskAuditTestHooks>) {
   taskAuditTestHooks.requireAnyRoleImpl = hooks.requireAnyRoleImpl ?? requireAnyRole;
+  taskAuditTestHooks.writeAuditLogImpl = hooks.writeAuditLogImpl ?? writeAuditLog;
   taskAuditTestHooks.getTaskRowByIdImpl = hooks.getTaskRowByIdImpl ?? getTaskRowById;
   taskAuditTestHooks.getTaskEventLedgerImpl =
     hooks.getTaskEventLedgerImpl ?? getTaskEventLedger;
   taskAuditTestHooks.listAuditLogEntriesImpl =
     hooks.listAuditLogEntriesImpl ?? listAuditLogEntries;
+}
+
+function readString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function getSourceTitle(sourceSnapshot: Record<string, unknown> | null, sourceIdentifier: string) {
@@ -176,12 +187,32 @@ function isWithinRetention(createdAt: Date) {
   return Date.now() - createdAt.getTime() <= retentionWindowMs;
 }
 
-function getFriendlyEventLabel(eventType: string) {
+function getTimelineKind(eventType: string): TaskAuditTimelineItem["kind"] {
+  switch (eventType) {
+    case "task.preset_decision_requested":
+      return "preset";
+    case "task.review_required":
+    case "task.human_review_requested":
+    case "task.review_resolved":
+      return "review";
+    case "task.failed":
+      return "failure";
+    case "task.retry_requested":
+    case "task.retry_spawned":
+      return "retry";
+    case "task.manual_intervention":
+      return "support";
+    default:
+      return "lifecycle";
+  }
+}
+
+function getTimelineLabel(eventType: string) {
   switch (eventType) {
     case "task.created":
       return "任务已创建";
     case "task.preset_decision_requested":
-      return "预设已决策";
+      return "预设决策已记录";
     case "task.review_required":
     case "task.human_review_requested":
       return "人工确认已请求";
@@ -197,16 +228,68 @@ function getFriendlyEventLabel(eventType: string) {
       return "任务已失败";
     case "task.completed":
       return "任务已完成";
-    case "deliverable.download":
-      return "交付物已访问";
-    case "authorization.denied":
-      return "访问已拒绝";
-    case "task.api_query":
-      return "任务审计读取";
-    case "task.api_deliverable_download":
-      return "API 交付物访问";
     default:
-      return "生命周期事件";
+      return "任务状态已变化";
+  }
+}
+
+function getTimelineDescription(event: TaskEventRecord) {
+  switch (event.eventType) {
+    case "task.preset_decision_requested": {
+      const resolution =
+        readString(event.payload.presetResolution) ?? readString(event.payload.resolution);
+      const note = readString(event.payload.note);
+
+      if (note) {
+        return note;
+      }
+
+      return resolution
+        ? `已记录预设路径：${getPresetPathLabel(resolution)}。`
+        : "当前任务已写入预设决策结果。";
+    }
+    case "task.review_required":
+    case "task.human_review_requested": {
+      const summary = readString(event.payload.summary);
+
+      if (summary) {
+        return summary;
+      }
+
+      const itemCount = Array.isArray(event.payload.items) ? event.payload.items.length : null;
+
+      return itemCount == null
+        ? "系统检测到低置信度内容，等待人工确认。"
+        : `共有 ${itemCount} 个片段等待人工确认。`;
+    }
+    case "task.review_resolved": {
+      const resolvedCount = Array.isArray(event.payload.resolvedItems)
+        ? event.payload.resolvedItems.length
+        : null;
+
+      return resolvedCount == null
+        ? "人工确认结果已提交。"
+        : `已提交 ${resolvedCount} 条人工确认结果。`;
+    }
+    case "task.manual_intervention":
+      return readString(event.payload.note) ?? "系统已记录一次人工介入操作。";
+    case "task.retry_requested":
+      return readString(event.payload.note) ?? "失败后已发起新的恢复重试。";
+    case "task.retry_spawned": {
+      const nextTaskId = readString(event.payload.nextTaskId);
+
+      return nextTaskId
+        ? `系统已生成新的恢复 attempt：${nextTaskId}。`
+        : "系统已生成新的恢复 attempt。";
+    }
+    case "task.failed":
+      return readString(event.payload.failureMessage) ?? "任务进入失败终态。";
+    case "task.completed":
+      return "处理链路已完成，交付结果可被读取。";
+    default:
+      return event.fromStatus === event.toStatus
+        ? "任务生命周期信息已更新。"
+        : `状态从 ${event.fromStatus} 变更为 ${event.toStatus}。`;
   }
 }
 
@@ -216,13 +299,25 @@ function getAccessAuditLabel(eventType: string) {
       return "交付物访问审计";
     case "authorization.denied":
       return "越权访问拒绝";
+    case "task.audit_query":
+      return "审计记录读取";
     case "task.api_query":
-      return "任务读取审计";
+      return "API 任务读取";
     case "task.api_deliverable_download":
-      return "API 交付物访问审计";
+      return "API 交付物访问";
     default:
       return "敏感访问审计";
   }
+}
+
+function formatRoleList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const roles = value.filter((item): item is string => typeof item === "string" && item.length > 0);
+
+  return roles.length > 0 ? roles.join(" / ") : null;
 }
 
 function getAccessAuditDetail(audit: AuditLogRecord) {
@@ -231,30 +326,49 @@ function getAccessAuditDetail(audit: AuditLogRecord) {
   }
 
   if (audit.eventType === "authorization.denied") {
-    return "已记录一次越权访问拒绝。";
+    const requiredRoles =
+      formatRoleList(audit.detail.requiredAnyRole) ?? formatRoleList(audit.detail.requiredRole);
+
+    return requiredRoles
+      ? `已拒绝一次越权访问，所需角色：${requiredRoles}。`
+      : "已拒绝一次越权访问。";
+  }
+
+  if (audit.eventType === "task.audit_query") {
+    const accessRoles = formatRoleList(audit.detail.accessRoles);
+
+    return accessRoles
+      ? `支持/运营审计页面已读取该任务，访问角色：${accessRoles}。`
+      : "支持/运营审计页面已读取该任务。";
   }
 
   if (audit.eventType === "task.api_query") {
-    return "已记录一次任务查询访问。";
+    return "外部 API 已查询该任务状态或结果。";
   }
 
   if (audit.eventType === "task.api_deliverable_download") {
-    return "已记录一次 API 交付物访问。";
+    return "外部 API 已访问该任务交付物。";
   }
 
   return "已记录一次敏感访问。";
 }
 
-function getPresetTimelineItem(task: TaskRecord): TaskAuditTimelineItem | null {
+function getPresetTimelineFallback(task: TaskRecord, events: TaskEventRecord[]) {
   const preset = task.presetSnapshot as TaskPresetSnapshot | null;
 
   if (!preset?.status || preset.status === "none") {
     return null;
   }
 
+  const hasPresetEvent = events.some((event) => event.eventType === "task.preset_decision_requested");
+
+  if (hasPresetEvent) {
+    return null;
+  }
+
   return {
     id: `${task.id}:preset`,
-    kind: "preset",
+    kind: "preset" as const,
     label: "预设已应用",
     description: preset.summary ?? getPresetPathLabel(preset.status),
     taskId: task.id,
@@ -266,24 +380,24 @@ function getPresetTimelineItem(task: TaskRecord): TaskAuditTimelineItem | null {
 }
 
 function toTimelineItems(task: TaskRecord, events: TaskEventRecord[], audits: AuditLogRecord[]) {
-  const items: TaskAuditTimelineItem[] = [];
+  const items: TaskAuditTimelineItem[] = [
+    {
+      id: `${task.id}:created`,
+      kind: "lifecycle",
+      label: "任务已创建",
+      description: "任务记录已建立，可按 task id 继续追踪后续历史。",
+      taskId: task.id,
+      requestId: events[0]?.requestId ?? "system",
+      occurredAt: task.createdAt.toISOString(),
+      actorLabel: "system",
+      beforeAfter: null,
+    },
+  ];
 
-  items.push({
-    id: `${task.id}:created`,
-    kind: "lifecycle",
-    label: "任务已创建",
-    description: "任务记录已创建。",
-    taskId: task.id,
-    requestId: events[0]?.requestId ?? "system",
-    occurredAt: task.createdAt.toISOString(),
-    actorLabel: "system",
-    beforeAfter: null,
-  });
+  const presetFallback = getPresetTimelineFallback(task, events);
 
-  const presetItem = getPresetTimelineItem(task);
-
-  if (presetItem) {
-    items.push(presetItem);
+  if (presetFallback) {
+    items.push(presetFallback);
   }
 
   for (const event of events) {
@@ -291,35 +405,19 @@ function toTimelineItems(task: TaskRecord, events: TaskEventRecord[], audits: Au
       continue;
     }
 
-    const beforeAfter =
-      event.fromStatus === event.toStatus
-        ? null
-        : `${event.fromStatus} → ${event.toStatus}`;
-
     items.push({
       id: event.id,
-      kind:
-        event.eventType === "task.retry_requested" ||
-        event.eventType === "task.retry_spawned"
-          ? "retry"
-          : event.eventType === "task.review_required" ||
-              event.eventType === "task.human_review_requested" ||
-              event.eventType === "task.review_resolved"
-            ? "review"
-            : event.eventType === "task.failed"
-              ? "failure"
-              : event.eventType === "task.manual_intervention"
-                ? "review"
-                : "lifecycle",
-      label: getFriendlyEventLabel(event.eventType),
-      description: event.reasonCode
-        ? `原因码：${event.reasonCode}`
-        : "状态或生命周期信息已记录。",
+      kind: getTimelineKind(event.eventType),
+      label: getTimelineLabel(event.eventType),
+      description: getTimelineDescription(event),
       taskId: task.id,
       requestId: event.requestId,
       occurredAt: event.createdAt.toISOString(),
       actorLabel: getActorLabel(event.actorUserId),
-      beforeAfter,
+      beforeAfter:
+        event.fromStatus === event.toStatus
+          ? null
+          : `${event.fromStatus} → ${event.toStatus}`,
     });
   }
 
@@ -332,11 +430,7 @@ function toTimelineItems(task: TaskRecord, events: TaskEventRecord[], audits: Au
       id: `audit:${audit.id}`,
       kind: "delivery",
       label: "交付物已访问",
-      description: [
-        audit.resourceType,
-        audit.resourceId,
-        audit.outcome,
-      ].join(" / "),
+      description: getAccessAuditDetail(audit),
       taskId: task.id,
       requestId: audit.requestId,
       occurredAt: audit.occurredAt.toISOString(),
@@ -354,6 +448,7 @@ function buildAccessLogs(task: TaskRecord, audits: AuditLogRecord[]): TaskAuditA
       [
         "deliverable.download",
         "authorization.denied",
+        "task.audit_query",
         "task.api_query",
         "task.api_deliverable_download",
       ].includes(audit.eventType),
@@ -489,60 +584,62 @@ function buildFailureSummary(events: TaskEventRecord[]) {
   };
 }
 
-function buildReviewSummary(taskId: string, events: TaskEventRecord[]) {
+function buildReviewSummary(events: TaskEventRecord[]) {
   const reviewQueue = extractReviewQueue(events);
 
   if (!reviewQueue) {
     return null;
   }
 
-  const confirmedCount = reviewQueue.resolvedDecisions.length;
-  const completedAt = events
-    .slice()
+  const resolvedEvent = [...events]
     .reverse()
-    .find((event) => event.eventType === "task.review_resolved")
-    ?.createdAt.toISOString() ?? null;
+    .find((event) => event.eventType === "task.review_resolved");
 
   return {
     reviewId: reviewQueue.reviewId,
     pendingCount: reviewQueue.pendingCount,
-    confirmedCount,
-    completedAt,
-    confirmedBy: completedAt ? "system" : "待确认",
+    confirmedCount: reviewQueue.resolvedDecisions.length,
+    completedAt: resolvedEvent?.createdAt.toISOString() ?? null,
+    confirmedBy: resolvedEvent ? getActorLabel(resolvedEvent.actorUserId) : "待确认",
   };
 }
 
-function buildManualSummary(events: TaskEventRecord[], audits: AuditLogRecord[]) {
+function buildManualSummary(events: TaskEventRecord[]) {
   const event = [...events]
     .reverse()
     .find((entry) => entry.eventType === "task.manual_intervention");
 
-  if (event) {
-    return {
-      actionType: "task.manual_intervention",
-      actorLabel: getActorLabel(event.actorUserId),
-      occurredAt: event.createdAt.toISOString(),
-      detail:
-        typeof event.payload.note === "string" && event.payload.note
-          ? event.payload.note
-          : "已记录一次人工介入。",
-    };
-  }
-
-  const audit = [...audits]
-    .reverse()
-    .find((entry) => entry.eventType === "authorization.denied" || entry.eventType === "deliverable.download");
-
-  if (!audit) {
+  if (!event) {
     return null;
   }
 
   return {
-    actionType: audit.eventType,
-    actorLabel: getActorLabel(audit.actorUserId),
-    occurredAt: audit.occurredAt.toISOString(),
-    detail: audit.outcome,
+    actionType: "task.manual_intervention",
+    actorLabel: getActorLabel(event.actorUserId),
+    occurredAt: event.createdAt.toISOString(),
+    detail: readString(event.payload.note) ?? "已记录一次人工介入。",
   };
+}
+
+function buildSummaryBody(args: {
+  currentStageLabel: string;
+  currentStatusLabel: string;
+  presetPathLabel: string;
+  attemptNumber: number;
+  partialHistory: boolean;
+}) {
+  const parts = [
+    `当前状态为「${args.currentStatusLabel}」`,
+    `当前阶段为「${args.currentStageLabel}」`,
+    `预设路径为「${args.presetPathLabel}」`,
+    `当前为第 ${args.attemptNumber} 次 attempt`,
+  ];
+
+  if (args.partialHistory) {
+    parts.push("部分更早历史已超出 30 天保留窗口");
+  }
+
+  return `${parts.join("，")}。`;
 }
 
 export async function loadTaskAuditViewModel(args: {
@@ -558,38 +655,50 @@ export async function loadTaskAuditViewModel(args: {
   const events = await taskAuditTestHooks.getTaskEventLedgerImpl(args.taskId);
   const audits = await taskAuditTestHooks.listAuditLogEntriesImpl(args.taskId);
   const latestEvent = events.at(-1) ?? null;
+  const latestAudit = audits[0] ?? null;
   const attempt = getTaskAttemptSnapshot(task.sourceSnapshot, task.id);
   const failureSummary = buildFailureSummary(events);
-  const reviewSummary = buildReviewSummary(task.id, events);
-  const manualSummary = buildManualSummary(events, audits);
+  const reviewSummary = buildReviewSummary(events);
+  const manualSummary = buildManualSummary(events);
   const timeline = toTimelineItems(task, events, audits);
   const accessLogs = buildAccessLogs(task, audits);
-  const retentionFilteredOut = !isWithinRetention(task.createdAt);
-  const retentionNote = retentionFilteredOut
-    ? "当前任务创建时间早于 30 天保留窗口，以下仅展示窗口内仍可查询到的关键审计记录。"
-    : "当前仅展示 30 天保留窗口内的关键审计记录。";
+  const partialHistory = !isWithinRetention(task.createdAt);
+  const currentStatusLabel = getTaskStatusPresentation(task.status).label;
+  const currentStageLabel = getTaskCurrentStageLabel(task.status, {
+    lastActiveStatus: latestEvent?.fromStatus ?? null,
+  });
+  const presetPathLabel = getPresetPathLabel(
+    (task.presetSnapshot as TaskPresetSnapshot | null)?.status,
+  );
+  const retentionNote = partialHistory
+    ? "当前任务创建时间早于 30 天保留窗口，以下仅展示窗口内仍可读取到的关键审计记录。"
+    : "当前仅展示 30 天保留窗口内的关键审计记录，避免依赖临时运行日志才能排障。";
 
   return {
     taskId: task.id,
     sourceIdentifier: task.sourceIdentifier,
     sourceTitle: getSourceTitle(task.sourceSnapshot, task.sourceIdentifier),
     currentStatus: task.status,
-    currentStatusLabel: getTaskStatusPresentation(task.status).label,
-    currentStageLabel: getTaskCurrentStageLabel(task.status, {
-      lastActiveStatus: latestEvent?.fromStatus ?? null,
-    }),
-    presetPathLabel: getPresetPathLabel((task.presetSnapshot as TaskPresetSnapshot | null)?.status),
+    currentStatusLabel,
+    currentStageLabel,
+    presetPathLabel,
     attemptNumber: attempt.attemptNumber,
     originTaskId: attempt.originTaskId,
     retryOfTaskId: attempt.retryOfTaskId,
-    requestId: latestEvent?.requestId ?? null,
+    requestId: latestEvent?.requestId ?? latestAudit?.requestId ?? null,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
     retentionNote,
-    partialHistory: retentionFilteredOut,
+    partialHistory,
     summary: {
-      title: "最小审计记录",
-      body: `任务 ${task.id} 的可查询审计记录已按结构化方式整理。`,
+      title: getSourceTitle(task.sourceSnapshot, task.sourceIdentifier),
+      body: buildSummaryBody({
+        currentStageLabel,
+        currentStatusLabel,
+        presetPathLabel,
+        attemptNumber: attempt.attemptNumber,
+        partialHistory,
+      }),
     },
     failureSummary,
     reviewSummary,
@@ -597,6 +706,28 @@ export async function loadTaskAuditViewModel(args: {
     timeline,
     accessLogs,
   };
+}
+
+async function recordTaskAuditRead(args: {
+  actorUserId: number;
+  actorSessionId: string;
+  taskId: string;
+  accessRoles: string[];
+}) {
+  try {
+    await taskAuditTestHooks.writeAuditLogImpl({
+      actorUserId: args.actorUserId,
+      actorSessionId: args.actorSessionId,
+      eventType: "task.audit_query",
+      resourceType: "task-audit",
+      resourceId: args.taskId,
+      outcome: "success",
+      detail: {
+        taskId: args.taskId,
+        accessRoles: args.accessRoles,
+      },
+    });
+  } catch {}
 }
 
 export async function loadTaskAuditForAuthorizedRole(args: {
@@ -607,9 +738,20 @@ export async function loadTaskAuditForAuthorizedRole(args: {
     session: { id: string };
   };
 }) {
-  await taskAuditTestHooks.requireAnyRoleImpl(args.authenticatedSession as never, ["support", "ops", "admin"], {
-    type: "task-audit",
-    id: args.taskId,
+  const roles = await taskAuditTestHooks.requireAnyRoleImpl(
+    args.authenticatedSession as never,
+    ["support", "ops", "admin"],
+    {
+      type: "task-audit",
+      id: args.taskId,
+    },
+  );
+
+  await recordTaskAuditRead({
+    actorUserId: args.authenticatedSession.user.id,
+    actorSessionId: args.authenticatedSession.session.id,
+    taskId: args.taskId,
+    accessRoles: roles,
   });
 
   return loadTaskAuditViewModel({

@@ -77,9 +77,9 @@ so that 我能复盘任务发生过什么并支撑解释、排障与恢复。
 
 ### Current Codebase State
 
-- `tasks/:taskId/audit`、`app/features/tasks/server/task-audit.server.ts`、`tests/task-audit*.ts` 已承载该能力。
-- 该实现曾因历史编号漂移误占 `6-2` 文件名，本次已纠正为 canonical `6.3`。
-- 3.4 support history 与 6.1 operations KPI 已按边界拆分，不再与 6.3 混写。
+- 最小审计记录继续走独立 route：`tasks/:taskId/audit`，但必须与 support 诊断和 ops 聚合入口保持清晰边界。
+- server 真源限定为 `tasks`、`task_events`、`audit_logs`，只允许拼 read model，不允许发明新的“审计状态表”。
+- `task-diagnostics.server.ts` 已提供 failure / review / attempt 解析能力，本 story 只复用这些领域语义，不复制另一套 support 解释模型。
 
 ## Dev Agent Record
 
@@ -89,18 +89,19 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 2026-06-14: implemented minimum task audit record route, read model, UI, authorization, and regression coverage
-- 2026-06-22T14:39:14+0800: corrected the historical Epic 6 artifact numbering drift and moved this implementation artifact to canonical Story 6.3
+- 2026-06-22T16:40:00+0800: rebuilt Story 6.3 from the canonical epic scope, keeping a separate audit route but rewriting the read model, structured screen semantics, and regression coverage
+- 2026-06-22T16:40:00+0800: added successful audit-read logging so task-level audit access itself becomes part of the queryable record without weakening support / ops / admin authorization boundaries
 
 ### Completion Notes List
 
-- Added `TaskAuditRecordView` projection over `tasks`, `task_events`, and `audit_logs`, including attempt lineage, failure/review/manual summaries, unified timeline, delivery access audit, and retention copy.
-- Added a dedicated audit route and structured task audit screen for `support` / `ops` / `admin`.
-- Synchronized BMAD artifact numbering so this completed audit implementation now belongs to Story 6.3.
+- Rebuilt `TaskAuditRecordView` around minimum audit facts instead of support-diagnostic copy: structured summary, failure summary, review summary, manual summary, unified lifecycle timeline, and dedicated access-audit list.
+- Kept the audit route separate from creator workspace and support diagnostics, while logging successful audit reads into `audit_logs` so “who queried this task” becomes part of the retained record.
+- Tightened the semantic split between timeline and access audit: delivery/download activity stays queryable, but manual summaries no longer fall back to unrelated access events.
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/6-3-minimum-audit-record-and-queryable-task-history.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `app/features/tasks/components/TaskAuditScreen.tsx`
 - `app/features/tasks/server/task-audit.server.ts`
 - `app/routes/tasks.$taskId.audit.tsx`
@@ -109,5 +110,20 @@ GPT-5 Codex
 
 ### Change Log
 
-- 2026-06-14: created and implemented the minimum audit record story
-- 2026-06-22: corrected artifact numbering so the completed task audit implementation aligns with canonical Story 6.3
+- 2026-06-22: reimplemented Story 6.3 from the canonical epic scope with a rewritten audit read model, screen semantics, and audit-read logging
+
+## Senior Developer Review (AI)
+
+Outcome: Approve
+
+Review Date: 2026-06-22
+
+Findings:
+
+- 6.3 现在明确聚焦单任务最小审计记录，不再把 support 诊断解释和访问审计混成同一段摘要。
+- 查询链路继续建立在 `tasks`、`task_events`、`audit_logs` 真源上，没有引入第二套审计状态模型。
+- 审计读取本身已进入 `audit_logs`，因此“谁读取过这条任务审计记录”也能在 30 天窗口内被追踪。
+
+Decision:
+
+- Approve。Story 6.3 已满足最小审计记录、结构化查询、访问控制和可读呈现的交付边界。

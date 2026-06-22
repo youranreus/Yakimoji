@@ -99,17 +99,20 @@ test("task audit model returns a structured minimum record and unified timeline"
 
   assert.equal(model.taskId, task.id);
   assert.equal(model.sourceIdentifier, "youtube:source_1");
+  assert.equal(model.sourceTitle, "来源标题");
+  assert.equal(model.summary.title, "来源标题");
   assert.equal(model.attemptNumber, 2);
   assert.equal(model.originTaskId, "task_origin");
   assert.ok(model.timeline.some((item) => item.label === "任务已创建"));
   assert.ok(model.timeline.some((item) => item.label === "预设已应用"));
   assert.ok(model.timeline.some((item) => item.label === "已请求恢复重试"));
   assert.ok(model.timeline.some((item) => item.label === "交付物已访问"));
+  assert.ok(model.timeline.some((item) => item.beforeAfter === "failed → queued"));
   assert.equal(model.accessLogs[0]?.requestId, "req_download_1");
   assert.equal(model.accessLogs[0]?.detail, "文件：final.mp4");
 });
 
-test("task audit model keeps failure, review and retention messaging available", async () => {
+test("task audit model keeps failure, review and manual summaries readable", async () => {
   setTaskAuditTestHooks({
     getTaskRowByIdImpl: async () =>
       makeTask({
@@ -148,6 +151,34 @@ test("task audit model keeps failure, review and retention messaging available",
         },
         createdAt: new Date("2026-05-26T01:30:00.000Z"),
       },
+      {
+        id: "event_review_resolved",
+        taskId: "task_audit_1",
+        eventType: "task.review_resolved",
+        fromStatus: "awaiting_human_review",
+        toStatus: "queued",
+        reasonCode: null,
+        requestId: "req_review_done",
+        actorUserId: 11,
+        payload: {
+          resolvedItems: [{ itemId: "line-1", decision: "approve" }],
+        },
+        createdAt: new Date("2026-05-26T02:10:00.000Z"),
+      },
+      {
+        id: "event_manual",
+        taskId: "task_audit_1",
+        eventType: "task.manual_intervention",
+        fromStatus: "queued",
+        toStatus: "queued",
+        reasonCode: null,
+        requestId: "req_manual",
+        actorUserId: 9,
+        payload: {
+          note: "人工补充来源信息",
+        },
+        createdAt: new Date("2026-05-26T02:20:00.000Z"),
+      },
     ],
     listAuditLogEntriesImpl: async () => [],
   });
@@ -163,6 +194,9 @@ test("task audit model keeps failure, review and retention messaging available",
 
   assert.equal(model.failureSummary?.reasonCode, "worker_timeout");
   assert.equal(model.reviewSummary?.reviewId, "review_1");
+  assert.equal(model.reviewSummary?.confirmedCount, 1);
+  assert.equal(model.reviewSummary?.confirmedBy, "user:11");
+  assert.equal(model.manualSummary?.detail, "人工补充来源信息");
   assert.match(model.retentionNote, /30 天/);
 });
 
@@ -216,6 +250,20 @@ test("task audit model marks partial history and keeps sensitive access audits v
         },
         occurredAt: new Date("2026-06-14T01:50:00.000Z"),
       },
+      {
+        id: 4,
+        requestId: "req_audit_ui",
+        actorUserId: 15,
+        eventType: "task.audit_query",
+        resourceType: "task-audit",
+        resourceId: "task_audit_1",
+        outcome: "success",
+        detail: {
+          taskId: "task_audit_1",
+          accessRoles: ["support", "ops"],
+        },
+        occurredAt: new Date("2026-06-14T01:55:00.000Z"),
+      },
     ],
   });
 
@@ -232,5 +280,6 @@ test("task audit model marks partial history and keeps sensitive access audits v
   assert.match(model.retentionNote, /早于 30 天保留窗口/);
   assert.ok(model.timeline.some((item) => item.label === "已记录人工介入"));
   assert.ok(model.accessLogs.some((item) => item.label === "越权访问拒绝"));
-  assert.ok(model.accessLogs.some((item) => item.label === "任务读取审计"));
+  assert.ok(model.accessLogs.some((item) => item.label === "API 任务读取"));
+  assert.ok(model.accessLogs.some((item) => item.label === "审计记录读取"));
 });

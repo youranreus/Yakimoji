@@ -35,6 +35,10 @@ export function TaskAuditScreen({ loaderData }: TaskAuditScreenProps) {
                 <dd>{loaderData.taskId}</dd>
               </div>
               <div>
+                <dt>来源标题</dt>
+                <dd>{loaderData.sourceTitle}</dd>
+              </div>
+              <div>
                 <dt>来源标识</dt>
                 <dd>{loaderData.sourceIdentifier}</dd>
               </div>
@@ -47,6 +51,10 @@ export function TaskAuditScreen({ loaderData }: TaskAuditScreenProps) {
                 <dd>{loaderData.currentStatusLabel}</dd>
               </div>
               <div>
+                <dt>当前阶段</dt>
+                <dd>{loaderData.currentStageLabel}</dd>
+              </div>
+              <div>
                 <dt>attempt</dt>
                 <dd>
                   {loaderData.attemptNumber} / {loaderData.originTaskId}
@@ -56,6 +64,14 @@ export function TaskAuditScreen({ loaderData }: TaskAuditScreenProps) {
               <div>
                 <dt>request_id</dt>
                 <dd>{loaderData.requestId ?? "暂无"}</dd>
+              </div>
+              <div>
+                <dt>创建时间</dt>
+                <dd>{formatTaskDate(loaderData.createdAt)}</dd>
+              </div>
+              <div>
+                <dt>最近更新时间</dt>
+                <dd>{formatTaskDate(loaderData.updatedAt)}</dd>
               </div>
             </dl>
           </section>
@@ -86,47 +102,67 @@ export function TaskAuditScreen({ loaderData }: TaskAuditScreenProps) {
                   <dt>可重试</dt>
                   <dd>{loaderData.failureSummary.retryable ? "是" : "否"}</dd>
                 </div>
+                <div>
+                  <dt>诊断标识</dt>
+                  <dd>{loaderData.failureSummary.diagnosticTraceId ?? "暂无"}</dd>
+                </div>
               </dl>
             </section>
           ) : null}
 
-          {loaderData.reviewSummary || loaderData.manualSummary ? (
+          {loaderData.reviewSummary ? (
             <section className="task-detail-callout" aria-labelledby="task-audit-review-title">
               <div className="task-detail-section-heading">
                 <div>
                   <p className="eyebrow">人工确认</p>
-                  <h2 id="task-audit-review-title">review 与人工操作摘要</h2>
+                  <h2 id="task-audit-review-title">review 摘要</h2>
                 </div>
-                <p className="task-panel-copy">包含人工确认、介入和恢复相关动作。</p>
+                <p className="task-panel-copy">用于快速确认当前任务是否经过人工确认，以及确认是否已闭环。</p>
               </div>
 
-              {loaderData.reviewSummary ? (
-                <dl className="task-callout-grid">
-                  <div>
-                    <dt>review ID</dt>
-                    <dd>{loaderData.reviewSummary.reviewId}</dd>
-                  </div>
-                  <div>
-                    <dt>待确认</dt>
-                    <dd>{loaderData.reviewSummary.pendingCount}</dd>
-                  </div>
-                  <div>
-                    <dt>已确认</dt>
-                    <dd>{loaderData.reviewSummary.confirmedCount}</dd>
-                  </div>
-                  <div>
-                    <dt>确认时间</dt>
-                    <dd>{loaderData.reviewSummary.completedAt ?? "暂无"}</dd>
-                  </div>
-                </dl>
-              ) : null}
+              <dl className="task-callout-grid">
+                <div>
+                  <dt>review ID</dt>
+                  <dd>{loaderData.reviewSummary.reviewId}</dd>
+                </div>
+                <div>
+                  <dt>待确认</dt>
+                  <dd>{loaderData.reviewSummary.pendingCount}</dd>
+                </div>
+                <div>
+                  <dt>已确认</dt>
+                  <dd>{loaderData.reviewSummary.confirmedCount}</dd>
+                </div>
+                <div>
+                  <dt>确认时间</dt>
+                  <dd>
+                    {loaderData.reviewSummary.completedAt
+                      ? formatTaskDate(loaderData.reviewSummary.completedAt)
+                      : "暂无"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>确认人</dt>
+                  <dd>{loaderData.reviewSummary.confirmedBy}</dd>
+                </div>
+              </dl>
+            </section>
+          ) : null}
 
-              {loaderData.manualSummary ? (
-                <p className="task-callout-copy">
-                  {loaderData.manualSummary.actionType} · {loaderData.manualSummary.actorLabel} ·{" "}
-                  {formatTaskDate(loaderData.manualSummary.occurredAt)} · {loaderData.manualSummary.detail}
-                </p>
-              ) : null}
+          {loaderData.manualSummary ? (
+            <section className="task-detail-callout" aria-labelledby="task-audit-manual-title">
+              <div className="task-detail-section-heading">
+                <div>
+                  <p className="eyebrow">人工介入</p>
+                  <h2 id="task-audit-manual-title">人工操作摘要</h2>
+                </div>
+                <p className="task-panel-copy">只呈现已正式记录的人工处理动作，不混入访问审计。</p>
+              </div>
+
+              <p className="task-callout-copy">
+                {loaderData.manualSummary.actionType} · {loaderData.manualSummary.actorLabel} ·{" "}
+                {formatTaskDate(loaderData.manualSummary.occurredAt)} · {loaderData.manualSummary.detail}
+              </p>
             </section>
           ) : null}
 
@@ -148,6 +184,7 @@ export function TaskAuditScreen({ loaderData }: TaskAuditScreenProps) {
                   </div>
                   <p>{item.description}</p>
                   <div className="feedback-meta">
+                    <span>{item.taskId}</span>
                     <span>{item.actorLabel}</span>
                     <span>{item.requestId}</span>
                     {item.beforeAfter ? <span>{item.beforeAfter}</span> : null}
@@ -178,6 +215,7 @@ export function TaskAuditScreen({ loaderData }: TaskAuditScreenProps) {
                     <div className="feedback-meta">
                       <span>{log.actorLabel}</span>
                       <span>{log.resourceType}</span>
+                      <span>{log.outcome}</span>
                       <span>{log.requestId}</span>
                     </div>
                   </article>
@@ -188,7 +226,11 @@ export function TaskAuditScreen({ loaderData }: TaskAuditScreenProps) {
             )}
           </section>
 
-          <p className="task-panel-copy">当前仅展示保留窗口内记录；如果历史不完整，这里会明确说明。</p>
+          <p className="task-panel-copy">
+            {loaderData.partialHistory
+              ? "更早历史已经超出保留窗口，当前页面只承诺窗口内最小审计能力。"
+              : "当前页面展示的结构化记录足以支撑第一阶段的解释、排障与恢复。"}
+          </p>
 
           <Link className="secondary-action" to="/workspace">
             返回工作台

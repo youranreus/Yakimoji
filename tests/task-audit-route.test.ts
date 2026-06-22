@@ -32,6 +32,8 @@ test("task audit route is registered as a separate support entry point", () => {
 });
 
 test("task audit loader allows support style roles and rejects creator-only sessions", async () => {
+  const auditWrites: Array<Record<string, unknown>> = [];
+
   setSessionTestHooks({
     getOptionalUserSessionImpl: async () => ({
       user: {
@@ -52,6 +54,9 @@ test("task audit loader allows support style roles and rejects creator-only sess
 
   setTaskAuditTestHooks({
     requireAnyRoleImpl: async () => ["support"],
+    writeAuditLogImpl: async (entry) => {
+      auditWrites.push(entry);
+    },
     getTaskRowByIdImpl: async () => ({
       id: "task_audit_1",
       creatorUserId: 7,
@@ -80,6 +85,12 @@ test("task audit loader allows support style roles and rejects creator-only sess
   );
 
   assert.equal(model.taskId, "task_audit_1");
+  assert.equal(auditWrites[0]?.eventType, "task.audit_query");
+  assert.equal(auditWrites[0]?.resourceType, "task-audit");
+  assert.deepEqual(auditWrites[0]?.detail, {
+    taskId: "task_audit_1",
+    accessRoles: ["support"],
+  });
 
   setTaskAuditTestHooks({
     requireAnyRoleImpl: async () => {
@@ -92,6 +103,7 @@ test("task audit loader allows support style roles and rejects creator-only sess
         },
       };
     },
+    writeAuditLogImpl: async () => undefined,
     getTaskRowByIdImpl: async () => null,
     getTaskEventLedgerImpl: async () => [],
     listAuditLogEntriesImpl: async () => [],
@@ -112,4 +124,43 @@ test("task audit loader allows support style roles and rejects creator-only sess
     ),
     (error: { init?: { status?: number } }) => error.init?.status === 403,
   );
+});
+
+test("task audit loader does not fail open when success audit logging throws", async () => {
+  setTaskAuditTestHooks({
+    requireAnyRoleImpl: async () => ["ops"],
+    writeAuditLogImpl: async () => {
+      throw new Error("audit write failed");
+    },
+    getTaskRowByIdImpl: async () => ({
+      id: "task_audit_2",
+      creatorUserId: 8,
+      sourceIdentifier: "youtube:source_2",
+      sourceSnapshot: {
+        title: "来源二",
+      },
+      presetSnapshot: {},
+      status: "completed",
+      createdAt: new Date("2026-05-26T01:00:00.000Z"),
+      updatedAt: new Date("2026-05-26T02:00:00.000Z"),
+    }),
+    getTaskEventLedgerImpl: async () => [],
+    listAuditLogEntriesImpl: async () => [],
+  });
+
+  const model = await runWithRequestContext(
+    createRequestContext({ "x-request-id": "req_audit_loader_soft_fail" }),
+    async () =>
+      loadTaskAuditForAuthorizedRole({
+        request: new Request("http://localhost/tasks/task_audit_2/audit"),
+        taskId: "task_audit_2",
+        authenticatedSession: {
+          user: { id: 21 },
+          session: { id: "sess_ops" },
+        },
+      }),
+  );
+
+  assert.equal(model.taskId, "task_audit_2");
+  assert.equal(model.summary.title, "来源二");
 });
